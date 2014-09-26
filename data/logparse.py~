@@ -1,8 +1,0 @@
-import os, sys, pdb
-
-def main():
-    fn = 'log/robotdata1.log'
-    lines = open(fn, 'r').readlines()
-
-if __name__ == '__main__':
-    main()

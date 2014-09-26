@@ -1,1 +1,3 @@
 *.py~
+.DS_store
+data/map/wean.dat
