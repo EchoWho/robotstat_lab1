@@ -15,7 +15,7 @@ class observation_model:
     dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
     mu_expon = 0 # mean of exponential distribution
     spread_expon = 3
-    max_rng = [48 , 52]
+    max_rng = [48 , 52] #need to calculate these
     # Relative weights of observation model components
     c = []
     c_hit = 13.0/16
@@ -51,16 +51,4 @@ class observation_model:
         p_z_given_x = C_hit * p_hit + C_short * p_short + C_max * p_max + C_rand * p_rand
         return p_z_given_x
         
-
-class motion_model:
-    i = 12345
-    p0 = 1 # uniform
-    mu = [0,0]
-    Sigma = [[1,0],[0,1]]
-
-    def Get_p_x1_given_x0_u(self, x0, u):
-         mu_x1 = mu + x0 + u
-         ellipse = multivariate_normal(mean=mu, cov=Sigma)
-         ellipse.pdf(x0)
-         # We may need to add a uniform component to this
 
