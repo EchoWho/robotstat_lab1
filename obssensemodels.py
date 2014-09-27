@@ -3,6 +3,7 @@ from scipy import signal as signal
 from scipy import stats as stats
 from math import sqrt
 import pdb
+import map_parser
 
 def mean_unif(a,b):
     return (a + b) / 2
@@ -11,21 +12,43 @@ def std_unif(a,b):
     return (b - a) / sqrt(12.0)
 
 class observation_model:
-    sigma = 5 # stdev of gaussian for p_hit (comp1_gauss)
-    dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
-    mu_expon = 0 # mean of exponential distribution
-    spread_expon = 3
-    max_rng = [48 , 52] #need to calculate these
-    # Relative weights of observation model components
-    c = []
-    c_hit = 13.0/16
-    c_short = 2.0/16
-    c_max = 1.0/16
-    c_rand = 1.0/16
-    """Some sort of map lookup thingy"""
+    
+    def __init__(map_obj):
+      sigma = 5 # stdev of gaussian for p_hit (comp1_gauss)
+      dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
+      mu_expon = 0 # mean of exponential distribution
+      spread_expon = 3
+      max_rng = [48 , 52] #need to calculate these
+      # Relative weights of observation model components
+      c = []
+      c_hit = 13.0/16
+      c_short = 2.0/16
+      c_max = 1.0/16
+      c_rand = 1.0/16
+      self.map_obj = map_obj
+
+
+    def get_weight(self, pose, laser_pose_offset, laser):
+      x = pose + laser_pose_offset
+      x[2] -= math.pi / 2.0 
+      delt_theta = math.pi / 180.0
+
+      # if the Laser pose is in the wall then the particle has weight 0
+      if self.map_obj.is_hit(x):
+        return 0
+
+      weight = 1
+      for zi, z in enumerate(laser):
+        weight *= self.Get_p_z_given_x_u(z, x)
+        x[2] += delt_theta
+      return weight
+      
+    #Some sort of map lookup thingy
     def Get_z_expected(self, x):
-        return x
-    def Get_p_z_given_x_u(self, z, x, u):
+      return self.map_obj.ray_finding(x)  
+
+
+    def Get_p_z_given_x_u(self, z, x):
         z_exp = self.Get_z_expected(x)
         # Determine relative weights for each component in the observation model
         # Add in any parameter changes to the distribution based on u, z_expected
