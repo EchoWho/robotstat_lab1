@@ -1,7 +1,6 @@
 import os, sys, pdb, numpy
 from scipy import signal as signal
 from scipy import stats as stats
-from math import sqrt
 import pdb
 import map_parser
 
@@ -9,42 +8,44 @@ def mean_unif(a,b):
     return (a + b) / 2
 
 def std_unif(a,b):
-    return (b - a) / sqrt(12.0)
+    return (b - a) / numpy.sqrt(12.0)
 
 class observation_model:
     
-    def __init__(map_obj):
-      sigma = 5 # stdev of gaussian for p_hit (comp1_gauss)
-      dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
-      mu_expon = 0 # mean of exponential distribution
-      spread_expon = 3
-      max_rng = [48 , 52] #need to calculate these
+    def __init__(self, map_obj):
+      self.sigma = 5 # stdev of gaussian for p_hit (comp1_gauss)
+      self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
+      self.mu_expon = 0 # mean of exponential distribution
+      self.spread_expon = 3
+      self.max_rng = [48 , 52] #need to calculate these
+
       # Relative weights of observation model components
-      c = []
-      c_hit = 13.0/16
-      c_short = 2.0/16
-      c_max = 1.0/16
-      c_rand = 1.0/16
+      self.c_hit = 13.0/16
+      self.c_short = 2.0/16
+      self.c_max = 1.0/16
+      self.c_rand = 1.0/16
       self.map_obj = map_obj
 
 
     def get_weight(self, pose, laser_pose_offset, laser):
-      x = pose + laser_pose_offset
-      x[2] -= math.pi / 2.0 
-      delt_theta = math.pi / 180.0
+      pose_new = list(pose + laser_pose_offset)
+      pose_new[2] -= numpy.pi / 2.0 
+      delt_theta = numpy.pi / 180.0
 
       # if the Laser pose is in the wall then the particle has weight 0
-      if self.map_obj.is_hit(x):
-        return 0
+      if self.map_obj.is_hit(pose_new):
+          return 0
 
       weight = 1
       for zi, z in enumerate(laser):
-        weight *= self.Get_p_z_given_x_u(z, x)
-        x[2] += delt_theta
+        weight *= self.Get_p_z_given_x_u(z, pose_new)
+        assert(weight >= 0)
+        pose_new[2] += (pose_new[2] + delt_theta) % (2 * numpy.pi)
       return weight
       
     #Some sort of map lookup thingy
     def Get_z_expected(self, x):
+        raise NotImplementedError("ITS NOT RIGHT, do the lookup!")
       return self.map_obj.ray_finding(x)  
 
 
