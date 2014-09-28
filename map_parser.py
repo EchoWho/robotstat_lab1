@@ -53,7 +53,7 @@ class map_obj(object):
         rays_fn = 'preprocessed_rays_{}_{}.npz'.format(self.n_angle_bins,
                                                        os.path.basename(map_fn))
 
-        if not os.path.isfile(rays_fn) or 1:
+        if not os.path.isfile(rays_fn):
             gcp.gtime(self.preprocess_rays)
             numpy.savez_compressed(rays_fn, self.ray_lookup)
         else:
