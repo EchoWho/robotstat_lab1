@@ -107,15 +107,16 @@ class map_obj(object):
                                        self.n_angle_bins), dtype = numpy.float64)
 
         # assumes all poses are [0, 2pi)
-        for (c_idx, coord) in enumerate([self.valid_coordinates[200]]):
-            print c_idx, len(self.valid_coordinates)
+        for (c_idx, coord) in enumerate(self.valid_coordinates):
+            if c_idx % 20 == 0:
+                print c_idx, len(self.valid_coordinates)
             for (a_idx, angle) in enumerate(numpy.arange(0, 2*numpy.pi, self.angle_bins_step)):
                 pose = numpy.array([coord[0], coord[1], angle])
                 dist = self.ray_finding(pose, is_pose = False)
                 if (dist == 0): 
                     print "dist is 0..."
                     pdb.set_trace()
-                self.ray_lookup[200, a_idx] = dist
+                self.ray_lookup[c_idx, a_idx] = dist
 
     def vis_ray_lookup(self, r_idx):
         hm = self.hit_map.copy()
