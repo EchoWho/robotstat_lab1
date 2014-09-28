@@ -10,6 +10,7 @@ class map_obj(object):
         x = 0
         self.hit_thresh = 0.8
 
+        self.coord_idx_lookup = {}
 
         self.valid_coordinates = []
         for line in open(map_fn, 'r').readlines():
@@ -36,7 +37,9 @@ class map_obj(object):
                 for y in range(self.mapsize_y):
                     self.grid[x, y] = np.float64(line[y])
                     if not self.is_hit((x, y), is_pose = False):
+                        idx = len(self.valid_coordinates)
                         self.valid_coordinates.append((x, y))
+                        self.coord_idx_lookup[(x, y)] = idx
                 x += 1
 
         self.grid[self.grid == -1] = 0
@@ -50,11 +53,11 @@ class map_obj(object):
         rays_fn = 'preprocessed_rays_{}_{}.npz'.format(self.n_angle_bins,
                                                        os.path.basename(map_fn))
 
-        if not os.path.isfile(rays_fn):
+        if not os.path.isfile(rays_fn) or 1:
             gcp.gtime(self.preprocess_rays)
             numpy.savez_compressed(rays_fn, self.ray_lookup)
         else:
-            self.ray_lookup = numpy.loadz(rays_fn)['arr_0']
+            self.ray_lookup = numpy.load(rays_fn)['arr_0']
 
 
         #iterate over positions in the map,
@@ -95,7 +98,7 @@ class map_obj(object):
         is_hit = self.is_hit(pose, is_pose = is_pose)
         while not is_hit:
             pose += pose_delt
-            dist += inc
+            dist += mult_const
             is_hit = self.is_hit(pose, is_pose = is_pose)
         return dist
 
@@ -104,10 +107,46 @@ class map_obj(object):
                                        self.n_angle_bins), dtype = numpy.float64)
 
         # assumes all poses are [0, 2pi)
-        for (c_idx, coord) in enumerate(self.valid_coordinates):
-            if c_idx % 20 == 0:
-                print c_idx, len(self.valid_coordinates)
+        for (c_idx, coord) in enumerate([self.valid_coordinates[200]]):
+            print c_idx, len(self.valid_coordinates)
             for (a_idx, angle) in enumerate(numpy.arange(0, 2*numpy.pi, self.angle_bins_step)):
                 pose = numpy.array([coord[0], coord[1], angle])
                 dist = self.ray_finding(pose, is_pose = False)
-                self.ray_lookup[c_idx, a_idx] = dist
+                if (dist == 0): 
+                    print "dist is 0..."
+                    pdb.set_trace()
+                self.ray_lookup[200, a_idx] = dist
+
+    def vis_ray_lookup(self, r_idx):
+        hm = self.hit_map.copy()
+        canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
+        
+        dists = self.ray_lookup[r_idx, :]
+        angles = numpy.arange(0, 2*numpy.pi, self.angle_bins_step)
+
+        coords = []
+        start_coord = self.valid_coordinates[r_idx]
+        
+        color = [255, 0, 0]
+        canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
+
+        for angle_idx in range(self.ray_lookup.shape[1]):
+            angle = angles[angle_idx]
+            dist = dists[angle_idx]
+
+            pose_delt = dist * numpy.array((math.cos(angle), math.sin(angle), 0.0)) / self.resolution
+            print pose_delt
+            new_coord = map(int, [start_coord[0] + pose_delt[0],
+                                  start_coord[1] + pose_delt[1]])
+            canvas[new_coord[0], new_coord[1], :] = color
+
+        canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
+
+        iu.v(canvas)
+            
+
+            
+            
+            
+                        
+            

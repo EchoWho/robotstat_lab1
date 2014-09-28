@@ -100,7 +100,10 @@ class particle_collection(object):
 def main():
 
     map_file = 'data/map/wean.dat'
+
     mo = map_parser.map_obj(map_file)
+    mo.vis_ray_lookup(200)
+    pdb.set_trace()
 
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)

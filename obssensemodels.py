@@ -46,7 +46,7 @@ class observation_model:
     #Some sort of map lookup thingy
     def Get_z_expected(self, x):
         raise NotImplementedError("ITS NOT RIGHT, do the lookup!")
-      return self.map_obj.ray_finding(x)  
+        return self.map_obj.ray_finding(x)  
 
 
     def Get_p_z_given_x_u(self, z, x):
