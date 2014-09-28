@@ -2,7 +2,7 @@ from numpy.random import multivariate_normal
 
 class odometry_control_generator(object):
     def __init__(self):
-      self.last_odom = None:
+      self.last_odom = None
 
     def calculate_u(self, new_pose):
       if self.last_odom == None:

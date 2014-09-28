@@ -48,7 +48,7 @@ class map_obj(object):
       dx, dy = math.cos(pose[2]), math.sin(pose[1])
       dist = 0
       is_hit = self.is_hit(x,y)
-      while !is_hit:
+      while not is_hit:
         x += dx
         y += dy
         dist += 1.0

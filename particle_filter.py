@@ -54,7 +54,7 @@ class particle_collection(object):
 
 def main():
 
-    map_file = '_'
+    map_file = 'data/map/wean.dat'
     mo = map_parser.map_obj(map_file)
 
     logfile_fn = 'data/log/robotdata1.log'

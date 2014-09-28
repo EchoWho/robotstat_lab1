@@ -4,8 +4,8 @@ MAP FILE FORMAT:
 It is pretty self-explanatory:
    -1  = don't know
    any value in [0;1] is a probability for occupancy:
-             1   = occupied with probability 1
-             0   = unoccupied with probability 1
+             0   = occupied with probability 1
+             1   = unoccupied with probability 1
              0.5 = occupied with probability 0.5
 The function in bee-map.c should make reading the map pretty easy.
 
