@@ -38,8 +38,10 @@ class particle_collection(object):
 
         for pos in random_positions:
             for theta_i in range(nbr_theta):
-                self.particles.append(particle(self.map_obj.resolution * 
-                                               numpy.array([pos[0], pos[1], theta_i * unit_theta]),1.0))
+                self.particles.append(particle(
+                                               numpy.array([self.map_obj.resolution * pos[0], 
+                                                            self.map_obj.resolution * pos[1], 
+                                                            theta_i * unit_theta]),1.0))
         # for theta_i in range(nbr_theta):
         #   for pos in enumerate(vec_pos):
 
@@ -102,8 +104,8 @@ def main():
     map_file = 'data/map/wean.dat'
 
     mo = map_parser.map_obj(map_file)
-    mo.vis_ray_lookup(200)
-    pdb.set_trace()
+    
+    # mo.
 
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)
@@ -125,8 +127,16 @@ def main():
     # mo.show()
     # pc.show()
 
+
+    pose     = pc.particles[200].pose
     
+    mo.vis_z_expected(pose)
+
+    print pose
+    obs_model.vis_p_z_given_x_u(pose)
+
     pdb.set_trace()
+    
     for (l_idx, line) in enumerate(log.lines):
         line = line.split()
 
@@ -157,6 +167,9 @@ def main():
             for i in range(180):
               laser.append(np.float64(line[i + laser_start]))
             for (p_idx, p) in enumerate(pc.particles):
+                if (p_idx % mo.n_angle_bins) == 0:
+                    mo.vis_z_expected(p.pose)                    
+
                 p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
                 if p.weight == 0:
                     n_in_wall += 1

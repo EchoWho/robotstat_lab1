@@ -26,5 +26,6 @@ class motion_model(object):
         mu_x1 = self.mu + x0.pose + u
         sample = multivariate_normal(mean = mu_x1, cov=self.Sigma)
         x0.pose = sample
-        x0.pose[-2] = x0.pose[-2] % (2 * numpy.pi)
+        x0.pose[-1] = x0.pose[-1] % (2 * numpy.pi)
+        print "u: {}, xo pose: {}".format(u, xo.pose)
          # We may need to add a uniform component to this

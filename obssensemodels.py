@@ -3,6 +3,7 @@ from scipy import signal as signal
 from scipy import stats as stats
 import pdb
 import map_parser
+import matplotlib.pyplot as plt
 
 def mean_unif(a,b):
     return (a + b) / 2
@@ -13,17 +14,17 @@ def std_unif(a,b):
 class observation_model:
     
     def __init__(self, map_obj):
-      self.sigma = 5 # stdev of gaussian for p_hit (comp1_gauss)
+      self.sigma = 20 # stdev of gaussian for p_hit (comp1_gauss)
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
       self.mu_expon = 0 # mean of exponential distribution
-      self.spread_expon = 3
-      self.max_rng = [48 , 52] #need to calculate these
+      self.spread_expon = 10
+      self.max_rng = [7000 , 8000] #need to calculate these
 
       # Relative weights of observation model components
-      self.c_hit = 13.0/16
-      self.c_short = 2.0/16
-      self.c_max = 1.0/16
-      self.c_rand = 1.0/16
+      self.c_hit = 10.
+      self.c_short = 1. 
+      self.c_max = 1.
+      self.c_rand = 500.
       self.map_obj = map_obj
 
 
@@ -44,13 +45,14 @@ class observation_model:
       return weight
       
     #Some sort of map lookup thingy
-    def Get_z_expected(self, x):
-        raise NotImplementedError("ITS NOT RIGHT, do the lookup!")
-        return self.map_obj.ray_finding(x)  
+    def Get_z_expected(self, pose):
+        z = self.map_obj.get_z_expected(pose)
+        return z
 
 
-    def Get_p_z_given_x_u(self, z, x):
-        z_exp = self.Get_z_expected(x)
+    def Get_p_z_given_pose_u(self, z, pose):
+        assert(len(pose) == 3)
+        z_exp = self.Get_z_expected(pose)
         # Determine relative weights for each component in the observation model
         # Add in any parameter changes to the distribution based on u, z_expected
 #        pdb.set_trace()
@@ -73,6 +75,19 @@ class observation_model:
         p_rand = unif2.pdf(z) # Uniform distr.
         # pdb.set_trace()
         p_z_given_x = C_hit * p_hit + C_short * p_short + C_max * p_max + C_rand * p_rand
+        
         return p_z_given_x
+
+    def vis_p_z_given_x_u(self, pose):
+        data = []
+        zs = numpy.arange(0, 1000, 10)
+        for z in zs:
+            pz = self.Get_p_z_given_pose_u(z, pose)
+            data.append(pz)
+            
+        f = plt.figure()
+        p = plt.scatter(zs, data)
+        plt.show(block = True)
+            
         
 

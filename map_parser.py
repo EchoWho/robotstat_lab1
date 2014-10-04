@@ -40,6 +40,11 @@ class map_obj(object):
                         idx = len(self.valid_coordinates)
                         self.valid_coordinates.append((x, y))
                         self.coord_idx_lookup[(x, y)] = idx
+                        # print "idx: {}".format(idx)
+                        # print "length: {}".format(len(self.valid_coordinates))
+                        # print "valid coord: {}".format(self.valid_coordinates[-1])
+                        # print "coord idx lookup: {}".format(self.coord_idx_lookup[(x, y)])
+                        # print "valid coord from idx: {}".format(self.valid_coordinates[idx])
                 x += 1
 
         self.grid[self.grid == -1] = 0
@@ -49,7 +54,8 @@ class map_obj(object):
         assert(len(self.valid_coordinates) > 0)
 
         self.n_angle_bins = 36
-        self.angle_bins_step = 2 * numpy.pi / self.n_angle_bins        
+        self.angle_bins_step = float(2 * numpy.pi / self.n_angle_bins)
+        self.angle_bins = numpy.arange(0, 2*numpy.pi, self.angle_bins_step)
         rays_fn = 'preprocessed_rays_{}_{}.npz'.format(self.n_angle_bins,
                                                        os.path.basename(map_fn))
 
@@ -74,7 +80,7 @@ class map_obj(object):
         iu.v(self.hit_map)
 
     def get_valid_coordinates(self):
-      return self.valid_coordinates
+      return copy.deepcopy(self.valid_coordinates)
 
     def is_hit(self, pose, is_pose = True):
         if is_pose:
@@ -118,6 +124,27 @@ class map_obj(object):
                     pdb.set_trace()
                 self.ray_lookup[c_idx, a_idx] = dist
 
+    def get_z_expected(self, pose):
+        idx = self._lookup_ind_for_coord(self.get_pose_coord(pose))
+        angle_mod = pose[-1] % (numpy.pi * 2)
+        angle_bin_idx = int((angle_mod / self.angle_bins_step) + .5 ) % self.n_angle_bins
+
+        # print "vc[idx]: {}".format(self.valid_coordinates[idx])
+        # print "pose: {}".format(pose)
+        return self.ray_lookup[idx, angle_bin_idx]
+
+    def _lookup_ind_for_coord(self, coord):
+        if coord not in self.coord_idx_lookup:
+            raise RuntimeError("ind not found")
+        return self.coord_idx_lookup[coord]
+
+    def vis_z_expected(self, pose):
+        idx = self._lookup_ind_for_coord(self.get_pose_coord(pose))
+        dist = self.get_z_expected(pose)
+        self.vis_ray_lookup(idx)
+        print "distance, angle: {}, {}".format(dist, pose[-1])
+        
+
     def vis_ray_lookup(self, r_idx):
         hm = self.hit_map.copy()
         canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
@@ -129,6 +156,7 @@ class map_obj(object):
         start_coord = self.valid_coordinates[r_idx]
         
         color = [255, 0, 0]
+
         canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
 
         for angle_idx in range(self.ray_lookup.shape[1]):
@@ -136,14 +164,26 @@ class map_obj(object):
             dist = dists[angle_idx]
 
             pose_delt = dist * numpy.array((math.cos(angle), math.sin(angle), 0.0)) / self.resolution
-            print pose_delt
             new_coord = map(int, [start_coord[0] + pose_delt[0],
                                   start_coord[1] + pose_delt[1]])
-            canvas[new_coord[0], new_coord[1], :] = color
+            
+            new_xs, new_ys = eight_neighborhood(new_coord[0], new_coord[1])
+            canvas[new_xs, new_ys, :] = color
 
-        canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
+            
+
+        xs, ys = eight_neighborhood(start_coord[0], start_coord[1])
+        # canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
+        canvas[xs, ys, :] = [0, 255, 0]
 
         iu.v(canvas)
+
+# TODO: check boundaries
+def eight_neighborhood(x, y):
+    xs = [x - 1, x - 1, x - 1, x, x, x, x + 1, x + 1, x + 1]
+    ys = [y - 1, y, y + 1, y - 1, y, y + 1, y - 1, y, y + 1]
+    return xs, ys
+    # return [x], [y]
             
 
             
