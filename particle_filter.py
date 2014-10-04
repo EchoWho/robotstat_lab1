@@ -114,7 +114,8 @@ def main():
     n_particles = 100
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
-                             map_obj = mo)
+                             map_obj = mo,
+                             nbr_theta = 5)
     print "created particle collection"
 
     num_new_motions = 0
@@ -126,17 +127,10 @@ def main():
 
     # mo.show()
     # pc.show()
+    #pose = pc.particles[200].pose
+    #mo.vis_z_expected(pose)
+    #obs_model.vis_p_z_given_x_u(pose)
 
-
-    pose     = pc.particles[200].pose
-    
-    mo.vis_z_expected(pose)
-
-    print pose
-    obs_model.vis_p_z_given_x_u(pose)
-
-    pdb.set_trace()
-    
     for (l_idx, line) in enumerate(log.lines):
         line = line.split()
 
@@ -168,17 +162,24 @@ def main():
               laser.append(np.float64(line[i + laser_start]))
             for (p_idx, p) in enumerate(pc.particles):
                 if (p_idx % mo.n_angle_bins) == 0:
-                    mo.vis_z_expected(p.pose)                    
+                    #mo.vis_z_expected(p.pose)                    
+                    pass
 
                 p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
                 if p.weight == 0:
                     n_in_wall += 1
-                print "on pidx {}/{}".format(p_idx + 1, len(pc.particles))
+                # print "on pidx {}/{}".format(p_idx + 1, len(pc.particles))
 
-            if (n_in_wall > 0):
-                mo.show()
-                pc.show()
+            new_weights = pc.get_weights()
+            print "max weigth: {}".format(new_weights.max())
+
+            #if (n_in_wall > 0):
+            #    mo.show()
+            #    pc.show()
+
+            mo.vis_particles(pc.particles)
                 
+            
             
         else:
             raise RuntimeError("unknown line type!!!11!!!1")

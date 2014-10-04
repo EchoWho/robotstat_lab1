@@ -178,6 +178,19 @@ class map_obj(object):
 
         iu.v(canvas)
 
+    def vis_particles(self, particles):
+        hm = self.hit_map.copy()
+        canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
+
+        color = [255, 0, 0]
+        for p in particles:
+            coord = self.get_pose_coord(p.pose)
+            xs, ys = eight_neighborhood(coord[0], coord[1])
+            canvas[xs, ys, :] = color
+
+        iu.v(canvas)
+        
+
 # TODO: check boundaries
 def eight_neighborhood(x, y):
     xs = [x - 1, x - 1, x - 1, x, x, x, x + 1, x + 1, x + 1]

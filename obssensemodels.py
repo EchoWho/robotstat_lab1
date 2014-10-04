@@ -15,6 +15,8 @@ class observation_model:
     
     def __init__(self, map_obj):
       self.sigma = 20 # stdev of gaussian for p_hit (comp1_gauss)
+      self.sigma2 = self.sigma**2
+      self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
       self.mu_expon = 0 # mean of exponential distribution
       self.spread_expon = 10
@@ -26,6 +28,7 @@ class observation_model:
       self.c_max = 1.
       self.c_rand = 500.
       self.map_obj = map_obj
+      # self.compute_normalizer()
 
 
     def get_weight(self, pose, laser_pose_offset, laser):
@@ -39,7 +42,7 @@ class observation_model:
 
       weight = 1
       for zi, z in enumerate(laser):
-        weight *= self.Get_p_z_given_x_u(z, pose_new)
+        weight *= self.Get_p_z_given_pose_u(z, pose_new)
         assert(weight >= 0)
         pose_new[2] += (pose_new[2] + delt_theta) % (2 * numpy.pi)
       return weight
@@ -67,15 +70,28 @@ class observation_model:
         C_max = C_max / sum_Cs
         C_rand = C_rand / sum_Cs
 
-        p_hit =  stats.norm.pdf(z, loc=(z_exp + self.dmu), scale=self.sigma) # comp1_gauss
-        p_short = stats.expon.pdf(z, self.mu_expon, self.spread_expon) # comp2_exp = # Exponential distribution here
-        unif1 = stats.uniform(loc = self.max_rng[0], scale = (self.max_rng[1] - self.max_rng[0]) )
-        p_max = unif1.pdf(z) # Uniform distribution
-        unif2 = stats.uniform( loc = 0, scale = (self.max_rng[1] - 0) )
-        p_rand = unif2.pdf(z) # Uniform distr.
+        # p_hit =  stats.norm.pdf(z, loc=(z_exp + self.dmu), scale=self.sigma) # comp1_gauss
+        p_hit =   self.norm_const * numpy.exp(-(z - z_exp)**2 / (2 * self.sigma2))
+
+        # p_short = stats.expon.pdf(z, self.mu_expon, self.spread_expon)
+        p_short =  1 / float(z+1) 
+
+        # unif1 = stats.uniform(loc = self.max_rng[0], scale = (self.max_rng[1] - self.max_rng[0]) )
+        # p_max = unif1.pdf(z) # Uniform distribution
+
+        unif1 = 1 / float(self.max_rng[1] - self.max_rng[0])
+        p_max = unif1 # Uniform distribution
+
+        # unif2 = stats.uniform( loc = 0, scale = (self.max_rng[1] - 0) )
+        # p_rand = unif2.pdf(z) # Uniform distr.
+
+        unif2 =  1 / float(self.max_rng[1])
+        p_rand = unif2
+
         # pdb.set_trace()
         p_z_given_x = C_hit * p_hit + C_short * p_short + C_max * p_max + C_rand * p_rand
         
+        p_z_given_x = p_z_given_x * 5000
         return p_z_given_x
 
     def vis_p_z_given_x_u(self, pose):
