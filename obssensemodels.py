@@ -14,7 +14,7 @@ def std_unif(a,b):
 class observation_model:
     
     def __init__(self, map_obj):
-      self.sigma = 20 # stdev of gaussian for p_hit (comp1_gauss)
+      self.sigma = 50 # stdev of gaussian for p_hit (comp1_gauss)
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
@@ -30,7 +30,6 @@ class observation_model:
       self.map_obj = map_obj
       # self.compute_normalizer()
 
-
     def get_weight(self, pose, laser_pose_offset, laser):
       pose_new = list(pose + laser_pose_offset)
       pose_new[2] -= numpy.pi / 2.0 
@@ -39,6 +38,9 @@ class observation_model:
       # if the Laser pose is in the wall then the particle has weight 0
       if self.map_obj.is_hit(pose_new):
           return 0
+
+      # FIXME this turned off observation model
+      # return 1
 
       weight = 1
       for zi, z in enumerate(laser):
@@ -91,7 +93,7 @@ class observation_model:
         # pdb.set_trace()
         p_z_given_x = C_hit * p_hit + C_short * p_short + C_max * p_max + C_rand * p_rand
         
-        p_z_given_x = p_z_given_x * 5000
+        p_z_given_x = p_z_given_x * 10000
         return p_z_given_x
 
     def vis_p_z_given_x_u(self, pose):
@@ -104,6 +106,7 @@ class observation_model:
         f = plt.figure()
         p = plt.scatter(zs, data)
         plt.show(block = True)
+        pdb.set_trace()
             
         
 

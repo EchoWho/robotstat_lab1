@@ -1,3 +1,4 @@
 *.py~
+*.pyc
 .DS_store
 data/map/wean.dat

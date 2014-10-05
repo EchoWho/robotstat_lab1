@@ -11,6 +11,8 @@ import math
 import numpy as np
 import copy
 
+from multiprocessing import Pool
+
 def isobservation(line):
     return line[0] == 'L'
 
@@ -18,32 +20,50 @@ def ismotion(line):
     return line[0] == 'O'
 
 class particle(object):
-    def __init__(self, pose, weight):
+    def __init__(self, pose, weight, gamma = 0):
         self.pose = pose
         self.weight = weight
+        self.gamma = gamma 
 
 class particle_collection(object):
-    def __init__(self, n_particles, map_obj, nbr_theta = 20):
+    def __init__(self, n_particles, map_obj, nbr_theta = 10, nbr_gamma=36):
         self.map_obj = map_obj
         self.n_particles = n_particles
         self.particles = []
+        self.max_ratio = 100
 
         unit_theta = 2 * math.pi / float(nbr_theta)
+        unit_gamma = 2 * math.pi / float(nbr_gamma)
         vec_pos = map_obj.get_valid_coordinates()
+        num_pos = len(vec_pos)
+        
+        for p_idx in range(n_particles):
+          pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
+          pos = vec_pos[pos_idx]
+          theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
+          gamma_i = int(numpy.random.uniform(0, nbr_gamma - 1e-6))
 
-        numpy.random.shuffle(vec_pos)
-        random_positions = vec_pos[:n_particles]
+          self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
+                                                      self.map_obj.resolution * pos[1], 
+                                                      theta_i * unit_theta]),
+                                         1.0, 
+                                         gamma_i * unit_gamma))
+
+
+        # numpy.random.shuffle(vec_pos)
+        # random_positions = vec_pos[:n_particles]
         # random_positions = numpy.random.choice(vec_pos, size = n_particles,
         #                                        replace = False)
 
-        for pos in random_positions:
-            for theta_i in range(nbr_theta):
-                self.particles.append(particle(
-                                               numpy.array([self.map_obj.resolution * pos[0], 
-                                                            self.map_obj.resolution * pos[1], 
-                                                            theta_i * unit_theta]),1.0))
-        # for theta_i in range(nbr_theta):
-        #   for pos in enumerate(vec_pos):
+        
+        #for pos in random_positions:
+        #    for theta_i in range(nbr_theta):
+        #      for gamma_i in range(nbr_gamma):
+        #        self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
+        #                                                    self.map_obj.resolution * pos[1], 
+        #                                                    theta_i * unit_theta]),
+        #                                       1.0, 
+        #                                       gamma_i * unit_gamma))
 
         print "created {} particles".format(len(self.particles))
 
@@ -79,6 +99,9 @@ class particle_collection(object):
         numpy.random.shuffle(self.particles)
 
         weights = self.get_weights()
+        max_weight = weights.max()
+        min_weight = max_weight / self.max_ratio
+        weights[np.array(map(lambda x: 0 < x < min_weight, weights))] = min_weight
         assert(weights.max() > 0)
 
         w_cumsums = np.cumsum(weights)
@@ -93,29 +116,38 @@ class particle_collection(object):
           selected.append(copy.deepcopy(self.particles[idx]))
           selected[-1].weight = 1
           w += inc
-          while w >= w_cumsums[idx]:
+          while idx < len(w_cumsums) and w >= w_cumsums[idx]:
             idx += 1
+
 
         self.particles = selected
         
+#### HACK ALERT FIXME the function run in parallel must be in global context ##
+def obs_update(args):
+  p = args[0]
+  obs_model = args[1]
+  laser_pose_offset = args[2]
+  laser = args[3]
+  p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
+  return p
 
 def main():
+
+    thread_pool = Pool(16)
 
     map_file = 'data/map/wean.dat'
 
     mo = map_parser.map_obj(map_file)
     
-    # mo.
-
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)
     
-    
-    n_particles = 100
+    n_particles = 4000
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
-                             nbr_theta = 5)
+                             nbr_theta = 10,
+                             nbr_gamma = 50)
     print "created particle collection"
 
     num_new_motions = 0
@@ -126,10 +158,10 @@ def main():
     mm = motion_model.motion_model()
 
     # mo.show()
-    # pc.show()
-    #pose = pc.particles[200].pose
-    #mo.vis_z_expected(pose)
-    #obs_model.vis_p_z_given_x_u(pose)
+    #pc.show()
+    pose = pc.particles[200].pose
+    mo.vis_z_expected(pose)
+    obs_model.vis_p_z_given_x_u(pose)
 
     for (l_idx, line) in enumerate(log.lines):
         line = line.split()
@@ -142,11 +174,13 @@ def main():
             u = ocg.calculate_u(pose)
             for p in pc.particles: 
                 mm.update(p, u)
+            
+            print "motion : {}".format(u)
 
         elif isobservation(line):
             num_new_observations += 1
             # 0. list of 180 laser readings [ float ] * 180 
-            # 1. for each particlae compute P(Z | X) = \prod P(Z_i | X)  i =0... 179
+            # 1. for each particle compute P(Z | X) = \prod P(Z_i | X)  i =0... 179
             #    1.1. E[Z_i | X] = func1(map_obj, cur_pose) 
             #    1.2 P(Z_i |X) = func2( E[Z_i] )
             #    1.3 weight = P(Z |X) = \prod 180 ...
@@ -159,28 +193,23 @@ def main():
             laser_start = 7
             n_in_wall = 0
             for i in range(180):
-              laser.append(np.float64(line[i + laser_start]))
-            for (p_idx, p) in enumerate(pc.particles):
-                if (p_idx % mo.n_angle_bins) == 0:
-                    #mo.vis_z_expected(p.pose)                    
-                    pass
+                laser.append(np.float64(line[i + laser_start]))
 
-                p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
-                if p.weight == 0:
-                    n_in_wall += 1
-                # print "on pidx {}/{}".format(p_idx + 1, len(pc.particles))
+#            n_particles = len(pc.particles)
+#            obs_update_args = zip(pc.particles, 
+#                                  [obs_model] * n_particles, 
+#                                  [laser_pose_offset] * n_particles,
+#                                  [laser] * n_particles) 
+#            pc.particles = thread_pool.map(obs_update, obs_update_args) 
+
+# IF not parallelizing
+            for p_idx, p in enumerate(pc.particles):
+              p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
 
             new_weights = pc.get_weights()
-            print "max weigth: {}".format(new_weights.max())
+            print "max weight: {}".format(new_weights.max())
+            print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
 
-            #if (n_in_wall > 0):
-            #    mo.show()
-            #    pc.show()
-
-            mo.vis_particles(pc.particles)
-                
-            
-            
         else:
             raise RuntimeError("unknown line type!!!11!!!1")
 
@@ -189,6 +218,9 @@ def main():
             num_new_observations = 0
             pc.resample()
             #update stuff
+
+        if l_idx % 5 == 0:
+          mo.vis_particles(pc.particles)
 
     print "DONE"
 

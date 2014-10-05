@@ -56,8 +56,9 @@ class map_obj(object):
         self.n_angle_bins = 36
         self.angle_bins_step = float(2 * numpy.pi / self.n_angle_bins)
         self.angle_bins = numpy.arange(0, 2*numpy.pi, self.angle_bins_step)
-        rays_fn = 'preprocessed_rays_{}_{}.npz'.format(self.n_angle_bins,
-                                                       os.path.basename(map_fn))
+        rays_fn = 'preprocessed_rays_{}_{}_{}.npz'.format(self.n_angle_bins,
+                                                          os.path.basename(map_fn),
+                                                          int(100 * self.hit_thresh))
 
         if not os.path.isfile(rays_fn):
             gcp.gtime(self.preprocess_rays)
@@ -186,6 +187,12 @@ class map_obj(object):
         for p in particles:
             coord = self.get_pose_coord(p.pose)
             xs, ys = eight_neighborhood(coord[0], coord[1])
+            xs = np.asarray(xs)
+            ys = np.asarray(ys)
+            xs[xs >= self.mapsize_x] = self.mapsize_x - 1
+            ys[ys >= self.mapsize_y] = self.mapsize_y - 1
+            xs[xs < 0] = 0
+            ys[ys < 0] = 0
             canvas[xs, ys, :] = color
 
         iu.v(canvas)
