@@ -105,7 +105,7 @@ class observation_model:
             
         f = plt.figure()
         p = plt.scatter(zs, data)
-        plt.show(block = True)
+        plt.show(block = False)
         pdb.set_trace()
             
         

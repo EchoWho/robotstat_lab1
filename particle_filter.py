@@ -11,6 +11,10 @@ import math
 import numpy as np
 import copy
 
+import matplotlib.pyplot as plt
+import matplotlib
+
+
 from multiprocessing import Pool
 
 def isobservation(line):
@@ -31,12 +35,22 @@ class particle_collection(object):
         self.n_particles = n_particles
         self.particles = []
         self.max_ratio = 100
+        self.last_scatter = None
 
         unit_theta = 2 * math.pi / float(nbr_theta)
         unit_gamma = 2 * math.pi / float(nbr_gamma)
         vec_pos = map_obj.get_valid_coordinates()
         num_pos = len(vec_pos)
         
+        self.fig = plt.figure(num = 1, figsize = (15, 15))
+        
+
+
+        map_orient = numpy.rot90(numpy.fliplr(self.map_obj.hit_map.copy()))
+
+        imgplot = plt.imshow(map_orient)
+        plt.show(block = False)
+
         for p_idx in range(n_particles):
           pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
           pos = vec_pos[pos_idx]
@@ -68,28 +82,41 @@ class particle_collection(object):
         print "created {} particles".format(len(self.particles))
 
     def show(self):
+        if self.last_scatter is not None:
+            self.last_scatter.remove()
+
         hm = self.map_obj.hit_map.copy()
         canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
 
         color = [255, 128, 0]
         
-        for p in self.particles:
-            pose_coord = self.map_obj.get_pose_coord(p.pose)
+        pose_coords = numpy.asarray([self.map_obj.get_pose_coord(p.pose) for p in self.particles])
+        x = pose_coords[:, 0]
+        y = pose_coords[:, 1]
+        
+        
+        self.last_scatter = plt.scatter(x, y, c='c')
+        plt.axis([0, 800, 800, 0])
+        plt.show(block = False)
+        self.fig.canvas.draw()
+        
+        # for p in self.particles:
+        #     pose_coord = self.map_obj.get_pose_coord(p.pose)
 
-            canvas[pose_coord[0] - 1, pose_coord[1] - 1, :] = color
-            canvas[pose_coord[0] - 1, pose_coord[1], :] = color
-            canvas[pose_coord[0] - 1, pose_coord[1] + 1, :] = color
+        #     canvas[pose_coord[0] - 1, pose_coord[1] - 1, :] = color
+        #     canvas[pose_coord[0] - 1, pose_coord[1], :] = color
+        #     canvas[pose_coord[0] - 1, pose_coord[1] + 1, :] = color
 
-            canvas[pose_coord[0] + 1, pose_coord[1] + 1, :] = color
-            canvas[pose_coord[0] + 1, pose_coord[1], :] = color
-            canvas[pose_coord[0] + 1, pose_coord[1] - 1, :] = color
+        #     canvas[pose_coord[0] + 1, pose_coord[1] + 1, :] = color
+        #     canvas[pose_coord[0] + 1, pose_coord[1], :] = color
+        #     canvas[pose_coord[0] + 1, pose_coord[1] - 1, :] = color
 
-            canvas[pose_coord[0], pose_coord[1] - 1, :] = color
-            canvas[pose_coord[0], pose_coord[1] + 1, :] = color
+        #     canvas[pose_coord[0], pose_coord[1] - 1, :] = color
+        #     canvas[pose_coord[0], pose_coord[1] + 1, :] = color
 
-            canvas[pose_coord[0], pose_coord[1], :] = color
+        #     canvas[pose_coord[0], pose_coord[1], :] = color
             
-        iu.v(canvas)
+        # iu.v(canvas)
 
     def get_weights(self):
         return numpy.array([p.weight for p in self.particles])
@@ -153,15 +180,18 @@ def main():
     num_new_motions = 0
     num_new_observations = 0
     
-    ocg = motion_model.odometry_control_generator()
+    odom_control_gen = motion_model.odometry_control_generator()
     obs_model = obssensemodels.observation_model(map_obj = mo)
     mm = motion_model.motion_model()
 
     # mo.show()
-    #pc.show()
-    pose = pc.particles[200].pose
-    mo.vis_z_expected(pose)
-    obs_model.vis_p_z_given_x_u(pose)
+    print "showing pc"
+    pc.show()
+
+
+    # pose = pc.particles[200].pose
+    # mo.vis_z_expected(pose)
+    # obs_model.vis_p_z_given_x_u(pose)
 
     for (l_idx, line) in enumerate(log.lines):
         line = line.split()
@@ -171,7 +201,7 @@ def main():
         if ismotion(line):
             num_new_motions += 1
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
-            u = ocg.calculate_u(pose)
+            u = odom_control_gen.calculate_u(pose)
             for p in pc.particles: 
                 mm.update(p, u)
             
@@ -220,7 +250,8 @@ def main():
             #update stuff
 
         if l_idx % 5 == 0:
-          mo.vis_particles(pc.particles)
+            pc.show()
+        #   mo.vis_particles(pc.particles)
 
     print "DONE"
 

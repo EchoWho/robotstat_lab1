@@ -8,12 +8,14 @@ class odometry_control_generator(object):
       self.last_odom = None
 
     def calculate_u(self, new_pose):
-      if self.last_odom == None:
-        u = numpy.array(( 0, 0, 0 ), dtype = numpy.float64)
-      else:
-        u = new_pose - self.last_odom  
-      self.last_odom = new_pose
-      return u
+        assert(new_pose != None)
+
+        if self.last_odom == None:
+            u = numpy.array(( 0, 0, 0 ), dtype = numpy.float64)
+        else:
+            u = new_pose - self.last_odom  
+        self.last_odom = new_pose
+        return u
         
 # TODO- mu, sig
 class motion_model(object):
