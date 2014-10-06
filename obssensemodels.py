@@ -47,6 +47,7 @@ class observation_view(object):
 #        plt.subplot(212)
         f1.clear()
         self.lastscatter = plt.scatter(data[0, :], data[1, :])
+        plt.axis([0, 8000, 0, 8000])
         plt.draw()
         
 
@@ -65,7 +66,7 @@ class observation_model:
       self.c_hit = 1.
       self.c_short = 1. 
       self.c_max = 1.
-      self.c_rand = 10000
+      self.c_rand = 100
       self.map_obj = map_obj
       # self.compute_normalizer()
 
@@ -143,14 +144,15 @@ class observation_model:
 
     def vis_p_z_given_x_u(self, pose):
         data = []
-        zs = numpy.arange(0, 1000, 1)
+        zs = numpy.arange(0, 8000, 1)
         for z in zs:
             pz = self.Get_p_z_given_pose_u(z, pose)
             data.append(pz)
             
-#        f = plt.figure()
-#        p = plt.scatter(zs, data)
-#        plt.show(block = False)
+        f = plt.figure()
+        p = plt.scatter(zs, data)
+        p.axis([0, 8000, 0, 8000])
+        plt.show(block = False)
         pdb.set_trace()
             
         

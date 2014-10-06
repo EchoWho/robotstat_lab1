@@ -149,7 +149,7 @@ def main():
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 200
+    n_particles = 300
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
@@ -172,7 +172,7 @@ def main():
     #print "showing pc"
     #pc.show()
 
-    #pose = pc.particles[200].pose
+    # pose = pc.particles[200].pose
     # mo.vis_z_expected(pose)
     # obs_model.vis_p_z_given_x_u(pose)
     
