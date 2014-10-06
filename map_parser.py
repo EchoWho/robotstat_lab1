@@ -71,6 +71,8 @@ class map_obj(object):
         #if it's valid add to valid coordinates
         # self.valid_coordinates.append(xy(x, y))
 
+    # input: world pose in centimeters
+    # output: world pose in decimeters
     def get_pose_coord(self, pose):
         return (int(pose[0] / self.resolution + .5), int(pose[1] / self.resolution + .5))
 
@@ -125,6 +127,8 @@ class map_obj(object):
                     pdb.set_trace()
                 self.ray_lookup[c_idx, a_idx] = dist
 
+    # input: pose x,y in world centimeters, theta in radians
+    # output: expected z 
     def get_z_expected(self, pose):
         idx = self._lookup_ind_for_coord(self.get_pose_coord(pose))
         angle_mod = pose[-1] % (numpy.pi * 2)

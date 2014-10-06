@@ -24,13 +24,12 @@ def ismotion(line):
     return line[0] == 'O'
 
 class particle(object):
-    def __init__(self, pose, weight, gamma = 0):
+    def __init__(self, pose, weight):
         self.pose = pose
         self.weight = weight
-        self.gamma = gamma 
 
 class particle_collection(object):
-    def __init__(self, n_particles, map_obj, nbr_theta = 10, nbr_gamma=36):
+    def __init__(self, n_particles, map_obj, nbr_theta = 10, fig_handle = None):
         self.map_obj = map_obj
         self.n_particles = n_particles
         self.particles = []
@@ -38,30 +37,32 @@ class particle_collection(object):
         self.last_scatter = None
 
         unit_theta = 2 * math.pi / float(nbr_theta)
-        unit_gamma = 2 * math.pi / float(nbr_gamma)
         vec_pos = map_obj.get_valid_coordinates()
         num_pos = len(vec_pos)
         
-        self.fig = plt.figure(num = 1, figsize = (15, 15))
-        
+        self.fig = fig_handle
+        map_orient = self.map_obj.hit_map.copy().T
 
-
-        map_orient = numpy.rot90(numpy.fliplr(self.map_obj.hit_map.copy()))
-
+        plt.figure(1)
+#        plt.subplot(211)
         imgplot = plt.imshow(map_orient)
         plt.show(block = False)
 
+        # for i in range(200):
+        #     delt= multivariate_normal(mean = np.array([0,0,0]), 
+        #         cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
+        #     self.particles.append(particle(numpy.array([4000, 
+        #                                                 4000, 
+        #                                                 0]), 1.0))
         for p_idx in range(n_particles):
           pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
           pos = vec_pos[pos_idx]
           theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
-          gamma_i = int(numpy.random.uniform(0, nbr_gamma - 1e-6))
 
           self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
                                                       self.map_obj.resolution * pos[1], 
                                                       theta_i * unit_theta]),
-                                         1.0, 
-                                         gamma_i * unit_gamma))
+                                         1.0))
 
 
         # numpy.random.shuffle(vec_pos)
@@ -69,17 +70,7 @@ class particle_collection(object):
         # random_positions = numpy.random.choice(vec_pos, size = n_particles,
         #                                        replace = False)
 
-        
-        #for pos in random_positions:
-        #    for theta_i in range(nbr_theta):
-        #      for gamma_i in range(nbr_gamma):
-        #        self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
-        #                                                    self.map_obj.resolution * pos[1], 
-        #                                                    theta_i * unit_theta]),
-        #                                       1.0, 
-        #                                       gamma_i * unit_gamma))
-
-        print "created {} particles".format(len(self.particles))
+        # print "created {} particles".format(len(self.particles))
 
     def show(self):
         if self.last_scatter is not None:
@@ -94,30 +85,13 @@ class particle_collection(object):
         x = pose_coords[:, 0]
         y = pose_coords[:, 1]
         
-        
+        plt.figure(1,figsize = (20, 20))
+#        plt.subplot(211)
         self.last_scatter = plt.scatter(x, y, c='c')
-        plt.axis([0, 800, 800, 0])
+        plt.axis([0, 800, 0, 800])
         plt.show(block = False)
-        self.fig.canvas.draw()
-        
-        # for p in self.particles:
-        #     pose_coord = self.map_obj.get_pose_coord(p.pose)
-
-        #     canvas[pose_coord[0] - 1, pose_coord[1] - 1, :] = color
-        #     canvas[pose_coord[0] - 1, pose_coord[1], :] = color
-        #     canvas[pose_coord[0] - 1, pose_coord[1] + 1, :] = color
-
-        #     canvas[pose_coord[0] + 1, pose_coord[1] + 1, :] = color
-        #     canvas[pose_coord[0] + 1, pose_coord[1], :] = color
-        #     canvas[pose_coord[0] + 1, pose_coord[1] - 1, :] = color
-
-        #     canvas[pose_coord[0], pose_coord[1] - 1, :] = color
-        #     canvas[pose_coord[0], pose_coord[1] + 1, :] = color
-
-        #     canvas[pose_coord[0], pose_coord[1], :] = color
-            
-        # iu.v(canvas)
-
+        plt.draw()
+       
     def get_weights(self):
         return numpy.array([p.weight for p in self.particles])
 
@@ -126,9 +100,9 @@ class particle_collection(object):
         numpy.random.shuffle(self.particles)
 
         weights = self.get_weights()
-        max_weight = weights.max()
-        min_weight = max_weight / self.max_ratio
-        weights[np.array(map(lambda x: 0 < x < min_weight, weights))] = min_weight
+        # max_weight = weights.max()
+        # min_weight = max_weight #/ self.max_ratio
+        # weights[np.array(map(lambda x: 0 < x < min_weight, weights))] = min_weight
         assert(weights.max() > 0)
 
         w_cumsums = np.cumsum(weights)
@@ -141,11 +115,9 @@ class particle_collection(object):
         selected = []
 
 
-        gamma_cov = numpy.pi / 180 * 2.
         for i in range(M):
           selected.append(copy.deepcopy(self.particles[idx]))
           selected[-1].weight = 1        
-          selected[-1].gamma = numpy.random.normal(selected[-1].gamma, gamma_cov)
           w += inc
           while idx < len(w_cumsums) and w >= w_cumsums[idx]:
             idx += 1
@@ -164,6 +136,10 @@ def obs_update(args):
 
 def main():
 
+    fig = plt.figure(num = 1, figsize = (20, 20))
+
+#    sf1 = fig.add_subplot(2,1,1)
+#    sf2 = fig.add_subplot(2,1,2)
     thread_pool = Pool(16)
 
     map_file = 'data/map/wean.dat'
@@ -173,61 +149,70 @@ def main():
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 1000
+    n_particles = 200
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
-                             nbr_theta = 10,
-                             nbr_gamma = 50)
+                             nbr_theta = 50,
+                             fig_handle = fig)
+
     print "created particle collection"
 
+    have_moved = True
+    first_obs_at_pos = True
     num_new_motions = 0
     num_new_observations = 0
     
     odom_control_gen = motion_model.odometry_control_generator()
     obs_model = obssensemodels.observation_model(map_obj = mo)
     mm = motion_model.motion_model()
+    obs_view = obssensemodels.observation_view(fig_handle = fig)
 
     # mo.show()
-    print "showing pc"
-    pc.show()
+    #print "showing pc"
+    #pc.show()
 
-
-    # pose = pc.particles[200].pose
+    #pose = pc.particles[200].pose
     # mo.vis_z_expected(pose)
     # obs_model.vis_p_z_given_x_u(pose)
-
-    for (l_idx, line) in enumerate(log.lines):
+    
+    # TODO THERE IS A SKIP
+    for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
 
-        if ismotion(line):
-            num_new_motions += 1
+        if ismotion(line) or isobservation(line):
+            num_new_motions += have_moved
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
             u = odom_control_gen.calculate_u(pose)
+
+            have_moved = numpy.linalg.norm(u[:2]) > 1e-6
+            first_obs_at_pos = first_obs_at_pos or have_moved
+                
+
             for p in pc.particles: 
                 mm.update(p, u)
             
             print "motion : {}".format(u)
 
-        elif isobservation(line):
-            num_new_observations += 1
-            # 0. list of 180 laser readings [ float ] * 180 
-            # 1. for each particle compute P(Z | X) = \prod P(Z_i | X)  i =0... 179
-            #    1.1. E[Z_i | X] = func1(map_obj, cur_pose) 
-            #    1.2 P(Z_i |X) = func2( E[Z_i] )
-            #    1.3 weight = P(Z |X) = \prod 180 ...
-
-            #  combine 1.1. and 1.2 as P(Z |X) = func(map_obj, cur_pose)
+        if isobservation(line):
+           #  combine 1.1. and 1.2 as P(Z |X) = func(map_obj, cur_pose)
             laser_pose_offset = (np.float64(line[4]) - np.float64(line[1]), 
                                  np.float64(line[5]) - np.float64(line[2]), 
                                  np.float64(line[6]) - np.float64(line[3]))
+
             laser = [ ]
             laser_start = 7
             n_in_wall = 0
             for i in range(180):
                 laser.append(np.float64(line[i + laser_start]))
+            obs_view.vis_pose_and_laser(pose, laser)
+            
+
+            if first_obs_at_pos:
+                num_new_observations += first_obs_at_pos
+                first_obs_at_pos = False
 
 #            n_particles = len(pc.particles)
 #            obs_update_args = zip(pc.particles, 
@@ -237,14 +222,15 @@ def main():
 #            pc.particles = thread_pool.map(obs_update, obs_update_args) 
 
 # IF not parallelizing
-            for p_idx, p in enumerate(pc.particles):
-              p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
+                for p_idx, p in enumerate(pc.particles):
+                  p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
 
-            new_weights = pc.get_weights()
-            print "max weight: {}".format(new_weights.max())
-            print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
+                  new_weights = pc.get_weights()
+                  print "max weight: {}".format(new_weights.max())
+                  print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
 
-        else:
+
+        elif not ismotion(line):
             raise RuntimeError("unknown line type!!!11!!!1")
 
         if (num_new_motions > 0) and (num_new_observations > 0):
@@ -253,11 +239,8 @@ def main():
             pc.resample()
             #update stuff
 
-        if l_idx % 5 == 0:
-            pc.show()
-        #   mo.vis_particles(pc.particles)
-
-    print "DONE"
+        pc.show()
+        
 
 if __name__ == '__main__':
     numpy.random.seed(seed=7111990)
