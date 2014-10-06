@@ -13,7 +13,7 @@ import copy
 
 import matplotlib.pyplot as plt
 import matplotlib
-
+from numpy.random import multivariate_normal
 
 from multiprocessing import Pool
 
@@ -139,9 +139,13 @@ class particle_collection(object):
         w = 0
         idx = 0
         selected = []
+
+
+        gamma_cov = numpy.pi / 180 * 2.
         for i in range(M):
           selected.append(copy.deepcopy(self.particles[idx]))
-          selected[-1].weight = 1
+          selected[-1].weight = 1        
+          selected[-1].gamma = numpy.random.normal(selected[-1].gamma, gamma_cov)
           w += inc
           while idx < len(w_cumsums) and w >= w_cumsums[idx]:
             idx += 1
@@ -169,7 +173,7 @@ def main():
     logfile_fn = 'data/log/robotdata1.log'
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 4000
+    n_particles = 1000
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,

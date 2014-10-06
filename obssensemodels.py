@@ -14,7 +14,7 @@ def std_unif(a,b):
 class observation_model:
     
     def __init__(self, map_obj):
-      self.sigma = 50 # stdev of gaussian for p_hit (comp1_gauss)
+      self.sigma = 1000 # stdev of gaussian for p_hit (comp1_gauss)
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
@@ -23,10 +23,10 @@ class observation_model:
       self.max_rng = [7000 , 8000] #need to calculate these
 
       # Relative weights of observation model components
-      self.c_hit = 10.
+      self.c_hit = 1.
       self.c_short = 1. 
       self.c_max = 1.
-      self.c_rand = 500.
+      self.c_rand = 100
       self.map_obj = map_obj
       # self.compute_normalizer()
 
@@ -91,14 +91,14 @@ class observation_model:
         p_rand = unif2
 
         # pdb.set_trace()
-        p_z_given_x = C_hit * p_hit + C_short * p_short + C_max * p_max + C_rand * p_rand
+        p_z_given_x = C_hit * p_hit + C_rand * p_rand# + C_short * p_short + C_max * p_max 
         
         p_z_given_x = p_z_given_x * 10000
         return p_z_given_x
 
     def vis_p_z_given_x_u(self, pose):
         data = []
-        zs = numpy.arange(0, 1000, 10)
+        zs = numpy.arange(0, 1000, 1)
         for z in zs:
             pz = self.Get_p_z_given_pose_u(z, pose)
             data.append(pz)

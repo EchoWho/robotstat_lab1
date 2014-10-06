@@ -36,15 +36,16 @@ def calculate_u(odom_arr, idx_first, idx_second):
 #     pdb.set_trace()
 
 class logparse(object):
-    def __init__(self, fn = 'log/robotdata1.log'):
+    def __init__(self, fn = 'data/log/robotdata1.log'):
         lines = open(fn, 'r').readlines()
         odoms = {}
+        ranges = []
 
         for (count, line) in enumerate(lines):
             if line[0] == 'O':
                 odoms[count] = line.rstrip().split(' ')[1:]
             elif line[0] == 'L':
-                pass
+                ranges.append(map(float, line.split()[7:-1]))
                 #parse lines
 
         print "entry length: {} ".format(len(odoms.values()[0]))
@@ -65,10 +66,14 @@ class logparse(object):
 
         print "xdiff: {}".format(odom_arr[:, 0].sum())
 
-
+        self.ranges = numpy.array(ranges)
         self.odom_arr = odom_arr
         self.u_s = u_s
         self.lines = lines
+
+def main():
+    lp = logparse()
+    pdb.set_trace()
 
 if __name__ == '__main__':
     main()

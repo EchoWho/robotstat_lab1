@@ -1,7 +1,10 @@
 from numpy.random import multivariate_normal
+import pdb
 import math
 import numpy
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 
 class odometry_control_generator(object):
     def __init__(self):
@@ -24,15 +27,30 @@ class motion_model(object):
         self.mu = numpy.zeros((3,), dtype = numpy.float64)
 
         theta_precision = float(2**5)
-        self.Sigma = numpy.array([5, 5, numpy.pi / theta_precision]) * numpy.eye(3)
+        self.motion_variance = 1e-6
+        self.Sigma = numpy.array([self.motion_variance, self.motion_variance, numpy.pi / theta_precision]) * numpy.eye(3)
 
     def update(self, x0, u):
         gamma = x0.gamma 
         cos_gamma = math.cos(gamma)
         sin_gamma = math.sin(gamma)
         rot_mat = np.array([[cos_gamma, -sin_gamma, 0], [sin_gamma, cos_gamma, 0], [0,0,1]])
-        mu_x1 = x0.pose + rot_mat.dot(u + self.mu)
-        sample = multivariate_normal(mean = mu_x1, cov=self.Sigma)
+
+        u_world = rot_mat.dot(u + self.mu)
+        mu_x1 = x0.pose + u_world
+
+        sigma = self.Sigma.copy()
+        sigma[range(2), range(2)] += .1 * u_world[:2]
+
+        sample = multivariate_normal(mean = mu_x1, cov=sigma)
+
+        if 0 and numpy.linalg.norm(u[:2]) > 0:
+            samples = multivariate_normal(mean = mu_x1[:2], cov=self.Sigma[:2, :2], size = 1000)
+            plt.figure()
+            plt.scatter(samples[:, 0], samples[:, 1])
+            plt.show(block = False)
+            pdb.set_trace()
+
         x0.pose = sample
         x0.pose[-1] = x0.pose[-1] % (2 * numpy.pi)
         # print "u: {}, x0 pose: {}".format(u, x0.pose)
