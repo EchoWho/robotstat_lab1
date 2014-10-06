@@ -63,7 +63,7 @@ class observation_model:
       self.max_rng = [7000 , 8000] #need to calculate these
 
       # Relative weights of observation model components
-      self.c_hit = 1.
+      self.c_hit = 10.
       self.c_short = 1. 
       self.c_max = 1.
       self.c_rand = 100
