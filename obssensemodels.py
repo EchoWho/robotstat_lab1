@@ -47,7 +47,9 @@ class observation_view(object):
 #        plt.subplot(212)
         f1.clear()
         self.lastscatter = plt.scatter(data[0, :], data[1, :])
-        plt.axis([0, 8000, 0, 8000])
+
+        bound = 1000
+        plt.axis([-bound, bound, -bound, bound])
         plt.draw()
         
 
@@ -63,11 +65,14 @@ class observation_model:
       self.max_rng = [7000 , 8000] #need to calculate these
 
       # Relative weights of observation model components
-      self.c_hit = 10.
+      self.p_power = 1. / 20
+      self.c_hit = 1.
       self.c_short = 1. 
       self.c_max = 1.
       self.c_rand = 100
       self.map_obj = map_obj
+
+      self.sample_perc = .5
       # self.compute_normalizer()
 
     def get_rot_mat(self, pose):
@@ -92,12 +97,20 @@ class observation_model:
             
         weight = np.float64(1)
         weight_sum = 0
+
+        bools = numpy.random.random(len(laser)) > self.sample_perc
+
         for zi, z in enumerate(laser):
-            #weight *= self.Get_p_z_given_pose_u(z, pose_new)
-            weight_sum += self.Get_p_z_given_pose_u(z, pose_new)
+            # weight *= self.Get_p_z_given_pose_u(z, pose_new)
+
+            if bools[zi]:
+                weight_sum += self.Get_p_z_given_pose_u(z, pose_new)
+
             pose_new[2] += (pose_new[2] + delt_theta) % (2 * numpy.pi)
+
         return weight_sum / np.float64(len(laser))
-      
+        # return weight
+
     def Get_z_expected(self, pose):
         z = self.map_obj.get_z_expected(pose)
         return z
@@ -140,6 +153,7 @@ class observation_model:
         # pdb.set_trace()
         p_z_given_x = C_hit * p_hit + C_rand * p_rand# + C_short * p_short + C_max * p_max 
         
+        # p_z_given_x = numpy.power(p_z_given_x, self.p_power)
         return p_z_given_x
 
     def vis_p_z_given_x_u(self, pose):
@@ -151,7 +165,7 @@ class observation_model:
             
         f = plt.figure()
         p = plt.scatter(zs, data)
-        p.axis([0, 8000, 0, 8000])
+        # plt.axis([0, 8000, 0, 8000])
         plt.show(block = False)
         pdb.set_trace()
             

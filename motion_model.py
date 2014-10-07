@@ -13,14 +13,13 @@ class odometry_control_generator(object):
     def calculate_u(self, new_pose):
         assert(new_pose != None)
 
-        if self.last_odom == None:
+        if self.last_odom is None:
             u = numpy.array(( 0, 0, 0 ), dtype = numpy.float64)
         else:
             u = new_pose - self.last_odom  
         self.last_odom = new_pose
         return u
         
-# TODO- mu, sig
 class motion_model(object):
     def __init__(self):
         self.p0 = 1 # uniform
@@ -30,9 +29,9 @@ class motion_model(object):
         self.motion_variance = 0
         self.Sigma = numpy.array([self.motion_variance, self.motion_variance, numpy.pi / 180. * deg_sigma]) * numpy.eye(3)
 
-        self.alpha1 = 1e-3
+        self.alpha1 = 1.2e-1
         self.alpha2 = 1e-2
-        self.alpha3 = 1e-2
+        self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
     def get_rot_mat(self, pose):
@@ -52,27 +51,36 @@ class motion_model(object):
         new_pose = numpy.asarray([xnew, ynew, th_new], dtype = numpy.float64)
         return new_pose
         
-    def update(self, x0, u):
+    def update(self, x0, u, u_norm, u_arctan):
         pose = x0.pose.copy()
 
-        drot1 = numpy.arctan2(u[1], u[0]) - pose[2]
-        dtrans = numpy.linalg.norm(u[:2])
+        drot1 = u_arctan - pose[2]
+        dtrans = u_norm
         drot2 = u[2] - drot1
 
-
-        
         drot1_sq = drot1**2
         dtrans_sq = dtrans**2
         drot2_sq = drot2**2
 
-        sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
-                             self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
-                             self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
-            numpy.eye(3)
+        # sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
+        #                      self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
+        #                      self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
+        #     numpy.eye(3)
         
         
-        sample = multivariate_normal(mean = [drot1, dtrans, drot2],
-                                     cov = sigma)
+        # sample = multivariate_normal(mean = [drot1, dtrans, drot2],
+        #                              cov = sigma)
+        
+        sample = numpy.random.normal(size=(3,))
+        sample = numpy.array( [drot1, dtrans, drot2] ) + \
+            numpy.sqrt([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
+                        self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
+                        self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * sample 
+        
+#        sample0 = numpy.random.normal(drot1, numpy.sqrt(self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq))
+#        sample1 = numpy.random.normal(dtrans, numpy.sqrt(self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq))
+#        sample2 = numpy.random.normal(drot2, numpy.sqrt(self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq))
+#        sample = numpy.asarray([sample0, sample1, sample2])
         
         new_pose = self.update_pose_with_sample(pose, sample)
         x0.pose = new_pose
@@ -89,7 +97,13 @@ class motion_model(object):
 
         # sample = multivariate_normal(mean = mu_x1, cov=sigma)
 
-        if 0 and numpy.linalg.norm(u[:2]) > 0:
+        if 1 and numpy.linalg.norm(u[:2]) > 0:
+            sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
+                                 self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
+                                 self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
+                numpy.eye(3)
+       
+
             n_samples = 1000
             samples = multivariate_normal(mean = [drot1, dtrans, drot2], cov = sigma, size = n_samples)
             

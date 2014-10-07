@@ -13,7 +13,9 @@ import copy
 
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.cm
 from numpy.random import multivariate_normal
+import vis_history
 
 from multiprocessing import Pool
 
@@ -42,10 +44,13 @@ class particle_collection(object):
         
         self.fig = fig_handle
         map_orient = self.map_obj.hit_map.copy().T
+        hm = self.map_obj.hit_map.copy()
+        self.canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
+        self.xy_record = None
 
         plt.figure(1)
 #        plt.subplot(211)
-        imgplot = plt.imshow(map_orient)
+        imgplot = plt.imshow(1 - map_orient, cmap = matplotlib.cm.gray)
         plt.show(block = False)
 
         # for i in range(200):
@@ -54,6 +59,7 @@ class particle_collection(object):
         #     self.particles.append(particle(numpy.array([4000, 
         #                                                 4000, 
         #                                                 0]), 1.0))
+     
         for p_idx in range(n_particles):
           pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
           pos = vec_pos[pos_idx]
@@ -64,6 +70,16 @@ class particle_collection(object):
                                                       theta_i * unit_theta]),
                                          1.0))
 
+    def record_xy(self):
+        print "recording xy"
+        pose_coords = numpy.asarray([self.map_obj.get_pose_coord(p.pose) for p in self.particles])
+        if self.xy_record is None:
+            self.xy_record = pose_coords
+        else:
+            self.xy_record = numpy.dstack((self.xy_record, pose_coords))
+
+        print "record shape: {}".format(self.xy_record.shape)
+        return pose_coords
 
         # numpy.random.shuffle(vec_pos)
         # random_positions = vec_pos[:n_particles]
@@ -72,22 +88,26 @@ class particle_collection(object):
 
         # print "created {} particles".format(len(self.particles))
 
-    def show(self):
+    def show(self, x = None, y = None):
         if self.last_scatter is not None:
             self.last_scatter.remove()
 
-        hm = self.map_obj.hit_map.copy()
-        canvas = 255 * numpy.dstack((numpy.zeros_like(hm), hm, hm)).astype('uint8')
+        canvas = self.canvas.copy()
 
         color = [255, 128, 0]
         
-        pose_coords = numpy.asarray([self.map_obj.get_pose_coord(p.pose) for p in self.particles])
-        x = pose_coords[:, 0]
-        y = pose_coords[:, 1]
+        if x is None and y is  None:
+            pose_coords = self.record_xy()
         
+            x = pose_coords[:, 0]
+            y = pose_coords[:, 1]
+        
+        self.plot_xy(x, y)
+        
+    def plot_xy(self, x, y):
         plt.figure(1,figsize = (20, 20))
 #        plt.subplot(211)
-        self.last_scatter = plt.scatter(x, y, c='c')
+        self.last_scatter = plt.scatter(x, y, s = 4, c='red', marker='o', edgecolors='none')
         plt.axis([0, 800, 0, 800])
         plt.show(block = False)
         plt.draw()
@@ -113,7 +133,6 @@ class particle_collection(object):
         w = 0
         idx = 0
         selected = []
-
 
         for i in range(M):
           selected.append(copy.deepcopy(self.particles[idx]))
@@ -145,11 +164,16 @@ def main():
     map_file = 'data/map/wean.dat'
 
     mo = map_parser.map_obj(map_file)
-    
     logfile_fn = 'data/log/robotdata1.log'
+
+    import datetime
+    ts = str(datetime.datetime.now()).split()[1]
+    record_fn = 'xy_record_{}_{}.npz'.format(os.path.basename(logfile_fn), ts)
+    
+
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 300
+    n_particles = 1000
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
@@ -176,7 +200,7 @@ def main():
     # mo.vis_z_expected(pose)
     # obs_model.vis_p_z_given_x_u(pose)
     
-    # TODO THERE IS A SKIP
+    #todo
     for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
 
@@ -189,12 +213,13 @@ def main():
 
             have_moved = numpy.linalg.norm(u[:2]) > 1e-6
             first_obs_at_pos = first_obs_at_pos or have_moved
-                
-
-            for p in pc.particles: 
-                mm.update(p, u)
             
-            print "motion : {}".format(u)
+            u_norm = numpy.linalg.norm(u[:2])
+            u_arctan = numpy.arctan2(u[1], u[0])
+
+            print "computing motion model.."
+            for p in pc.particles: 
+                mm.update(p, u, u_norm, u_arctan)
 
         if isobservation(line):
            #  combine 1.1. and 1.2 as P(Z |X) = func(map_obj, cur_pose)
@@ -207,7 +232,7 @@ def main():
             n_in_wall = 0
             for i in range(180):
                 laser.append(np.float64(line[i + laser_start]))
-            obs_view.vis_pose_and_laser(pose, laser)
+            # obs_view.vis_pose_and_laser(pose, laser)
             
 
             if first_obs_at_pos:
@@ -226,8 +251,8 @@ def main():
                   p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
 
                   new_weights = pc.get_weights()
-                  print "max weight: {}".format(new_weights.max())
-                  print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
+                print "max weight: {}".format(new_weights.max())
+                print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
 
 
         elif not ismotion(line):
@@ -236,10 +261,18 @@ def main():
         if (num_new_motions > 0) and (num_new_observations > 0):
             num_new_motions = 0
             num_new_observations = 0
+            
+            print "resampling..."
             pc.resample()
+            print "resampled"
             #update stuff
-
+        
         pc.show()
+        print "lidx ", l_idx
+        if l_idx % 40 == 0:
+            numpy.savez_compressed(record_fn, pc.xy_record)
+
+    vis_history.vis_collection(record_fn)
         
 
 if __name__ == '__main__':

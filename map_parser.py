@@ -6,7 +6,7 @@ import gtkutils.img_util as iu
 from gtkutils.color_printer import gcp
 
 class map_obj(object):
-    def __init__(self, map_fn):
+    def __init__(self, map_fn, n_angle_bins = 36):
         x = 0
         self.hit_thresh = 0.8
 
@@ -53,7 +53,7 @@ class map_obj(object):
 
         assert(len(self.valid_coordinates) > 0)
 
-        self.n_angle_bins = 36
+        self.n_angle_bins = n_angle_bins
         self.angle_bins_step = float(2 * numpy.pi / self.n_angle_bins)
         self.angle_bins = numpy.arange(0, 2*numpy.pi, self.angle_bins_step)
         rays_fn = 'preprocessed_rays_{}_{}_{}.npz'.format(self.n_angle_bins,
@@ -200,6 +200,12 @@ class map_obj(object):
             canvas[xs, ys, :] = color
 
         iu.v(canvas)
+
+def main():
+    map_file = 'data/map/wean.dat'
+    n_angle_bins = 72
+    mo = map_obj(map_file, n_angle_bins)
+
         
 
 # TODO: check boundaries
@@ -212,6 +218,6 @@ def eight_neighborhood(x, y):
 
             
             
-            
-                        
+if __name__ == '__main__':
+    main()
             
