@@ -153,7 +153,7 @@ def obs_update(args):
 
 def main():
 
-    fig = plt.figure(num = 1, figsize = (20, 20))
+    fig = plt.figure(num = 1, figsize = (10, 10))
 
 #    sf1 = fig.add_subplot(2,1,1)
 #    sf2 = fig.add_subplot(2,1,2)
@@ -194,9 +194,9 @@ def main():
     #print "showing pc"
     pc.show()
 
-#    pose = pc.particles[200].pose
-#    mo.vis_z_expected(pose)
-#    obs_model.vis_p_z_given_x_u(pose)
+    pose = pc.particles[200].pose
+    #mo.vis_z_expected(pose)
+    obs_model.vis_p_z_given_x_u(pose)
     
     for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
