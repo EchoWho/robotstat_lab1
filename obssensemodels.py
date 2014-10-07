@@ -139,10 +139,6 @@ class observation_model:
         #                                                offset_arctan.item(),
         #                                                numpy.array(laser, dtype = numpy.float64))
 
-        drot1 = 1.
-        dtrans = 1.
-        drot2 = 1.
-
         ## used to sanity check the cpp
         # l = self.cpp_motion_model.compute_relative_transform_float(pose, 
         #                                                  numpy.array(laser_pose_offset,
@@ -165,7 +161,7 @@ class observation_model:
 
         
         # if the Laser pose is in the wall then the particle has weight 0
-        if self.map_obj.is_hit(pose_new):
+        if self.map_obj.is_hit(pose_new) or self.map_obj.is_hit(pose):
             return 0
 
         return self.get_point_wise_weight(pose_new, laser)
@@ -186,9 +182,15 @@ class observation_model:
     def get_point_wise_weight(self, pose_new, laser):
         delt_theta = numpy.pi / 180.0
         log_weight_sum = 0
+
+        self.current_pw_weights = []
+        self.current_pose_new_log = []
+
         for zi, z in enumerate(laser):
             if (zi % 5 == 0):
-                log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
+                logpz = self.Get_log_p_z_given_pose_u(z, pose_new)
+                log_weight_sum += logpz
+                self.current_pw_weights.append(logpz)
             pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
         weight = numpy.exp(log_weight_sum)

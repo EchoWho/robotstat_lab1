@@ -263,26 +263,39 @@ def main():
                 # pdb.set_trace()
 
                 use_cpp_version = True
+                do_both = False
+                py_weights = []
 
-                if use_cpp_version:
+                if use_cpp_version or do_both:
                     print "using cpp version"
                     poses = numpy.array([p.pose.copy() for p in pc.particles])
 
                     update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
+                    
                     weights = update_particle_weights_func(poses,
                                                            numpy.array(laser_pose_offset, 
                                                                        dtype = numpy.float64),
-                                                           numpy.array([offset_norm, offset_arctan], dtype=numpy.float64),
+                                                           numpy.array([offset_norm, offset_arctan], 
+                                                                       dtype=numpy.float64),
                                                            numpy.array(laser, dtype = numpy.float64))
 
                     if (weights.shape != (len(pc.particles),)):
                         raise RuntimeError("cpp weights wrong dim!")
                     for (p_idx, p) in enumerate(pc.particles):
                         p.weight *= weights[p_idx]                
-                else:
+                if not use_cpp_version or do_both:
                     print "using python version"
                     for p_idx, p in enumerate(pc.particles):
-                        p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
+                        one_weight = obs_model.get_weight(p.pose, 
+                                                          laser_pose_offset, 
+                                                          offset_norm, 
+                                                          offset_arctan, 
+                                                          laser)
+                        py_weights.append(one_weight)
+                        p.weight *= one_weight
+                    
+                    py_weights = numpy.array(py_weights)
+                    pdb.set_trace()
 
                 new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
@@ -315,7 +328,8 @@ def main():
             #update stuff
         
         print "lidx ", l_idx
-        if l_idx % 10 == 0:
+        display_period = 8
+        if l_idx % display_period == 0:
             print "updating display..."
             pc.show()
             print "updated"

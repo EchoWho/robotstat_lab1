@@ -68,9 +68,8 @@ class motion_model(object):
     def update(self, x0, u, u_norm, u_arctan):
         # print "original pose: ", x0.pose
 
-        # x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
-        # sys.exit()
-        # return
+        x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+        return
 
         pose = x0.pose
         drot1, dtrans, drot2 = compute_relative_transform(pose, u, u_norm, u_arctan)
