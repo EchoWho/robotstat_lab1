@@ -30,6 +30,6 @@ public:
 				    double &dtrans,
 				    double &drot2);
 
-    pyarr<double> update_pose_with_sample(pyarr<double> &pose,
-					  pyarr<double> &sample);
+    vector<double> update_pose_with_sample(pyarr<double> &pose,
+					   vector<double> &sample);
 };

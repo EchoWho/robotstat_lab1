@@ -31,16 +31,14 @@ void motion_model::compute_relative_transform(pyarr<double> &pose,
     drot2 = u[ind(2)] - drot1;
 }
 
-pyarr<double> motion_model::update_pose_with_sample(pyarr<double> &pose,
-						    pyarr<double> &sample)
+vector<double> motion_model::update_pose_with_sample(pyarr<double> &pose,
+						    vector<double> &sample)
 {
-    vector<long int> dims;
-    dims.push_back(3);
-    pyarr<double> new_pose(dims);
+    vector<double> new_pose(3, 0);
     
-    new_pose[ind(0)] = pose[ind(0)] + sample[ind(1)] * cos(pose[ind(2)] + sample[ind(0)]);
-    new_pose[ind(1)] = pose[ind(1)] + sample[ind(1)] * sin(pose[ind(2)] + sample[ind(0)]);
-    new_pose[ind(2)] = true_mod((pose[ind(2)] + sample[ind(0)] + sample[ind(2)]), 2*M_PI);
+    new_pose[0] = pose[ind(0)] + sample[1] * cos(pose[ind(2)] + sample[0]);
+    new_pose[1] = pose[ind(1)] + sample[1] * sin(pose[ind(2)] + sample[0]);
+    new_pose[2] = true_mod((pose[ind(2)] + sample[0] + sample[2]), 2*M_PI);
     return new_pose;
 }
 
@@ -66,15 +64,21 @@ pyarr<double> motion_model::update(pyarr<double> pose,
 
     double num = normal_generator();
 
+    vector<double> sample;
+    
+    sample.push_back(drot1 + (alpha1 * drot1_sq + alpha2 * dtrans_sq) * normal_generator());
+    sample.push_back(dtrans + (alpha3 * dtrans_sq + alpha4 * drot1_sq + alpha4 * drot2_sq) * normal_generator());
+    sample.push_back(drot2 + (alpha1 * drot2_sq + alpha2 * dtrans_sq) * normal_generator());
+
     vector<long int> dims;
     dims.push_back(3);
-    pyarr<double> sample(dims);
-    
-    sample[ind(0)] = drot1 + (alpha1 * drot1_sq + alpha2 * dtrans_sq) * normal_generator();
-    sample[ind(1)] = dtrans + (alpha3 * dtrans_sq + alpha4 * drot1_sq + alpha4 * drot2_sq) * normal_generator();
-    sample[ind(2)] = drot2 + (alpha1 * drot2_sq + alpha2 * dtrans_sq) * normal_generator();
+    pyarr<double> new_pose(dims);
 
-    return update_pose_with_sample(pose, sample);
+    vector<double> new_pose_vec = update_pose_with_sample(pose, sample);
+    new_pose[ind(0)] = new_pose_vec[0];
+    new_pose[ind(1)] = new_pose_vec[1];
+    new_pose[ind(2)] = new_pose_vec[2];
+    return new_pose;
 }
 
 BOOST_PYTHON_MODULE(libmotion_model)

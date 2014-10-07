@@ -104,6 +104,7 @@ class observation_model:
 
       self.cpp_observation_model._check_lookup_size()
       self.cpp_motion_model = cpp_motion_model
+      pdb.set_trace()
       
       # self.compute_normalizer()
 
@@ -123,37 +124,37 @@ class observation_model:
         # print "pose coord", pose_coord
         # print "z exp", self.map_obj.get_z_expected(pose_new)
 
-        weight = self.cpp_observation_model.get_weight(pose.copy(),
-                                                       numpy.array(laser_pose_offset, dtype = numpy.float64),
-                                                       offset_norm.item(),
-                                                       offset_arctan.item(),
-                                                       numpy.array(laser, dtype = numpy.float64))
+        # weight = self.cpp_observation_model.get_weight(pose.copy(),
+        #                                                numpy.array(laser_pose_offset, dtype = numpy.float64),
+        #                                                offset_norm.item(),
+        #                                                offset_arctan.item(),
+        #                                                numpy.array(laser, dtype = numpy.float64))
 
-        # drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
-        #     laser_pose_offset, offset_norm, offset_arctan)
-        # pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
-        # pose_new[2] -= numpy.pi / 2.0 
+        drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
+            laser_pose_offset, offset_norm, offset_arctan)
+        pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
+        pose_new[2] -= numpy.pi / 2.0 
 
 
 
-        # delt_theta = numpy.pi / 180.0
+        delt_theta = numpy.pi / 180.0
         
-        # # if the Laser pose is in the wall then the particle has weight 0
-        # if self.map_obj.is_hit(pose_new):
-        #     return 0
+        # if the Laser pose is in the wall then the particle has weight 0
+        if self.map_obj.is_hit(pose_new):
+            return 0
             
-        # log_weight_sum = 0
-        # #bools = numpy.random.random(len(laser)) > self.sample_perc
-        # bools = numpy.ones(len(laser), dtype=bool)
+        log_weight_sum = 0
+        #bools = numpy.random.random(len(laser)) > self.sample_perc
+        bools = numpy.ones(len(laser), dtype=bool)
 
-        # for zi, z in enumerate(laser):
-        #     if bools[zi]:
-        #         log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
-        #         #lw = self.Get_log_p_z_given_pose_u(z, pose_new)
-        #         #print "angle_{}_z_{}_prob_{}".format(zi, z, numpy.exp(lw))
-        #     pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
+        for zi, z in enumerate(laser):
+            if bools[zi]:
+                log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
+                #lw = self.Get_log_p_z_given_pose_u(z, pose_new)
+                #print "angle_{}_z_{}_prob_{}".format(zi, z, numpy.exp(lw))
+            pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
-        # weight = numpy.exp(log_weight_sum)
+        weight = numpy.exp(log_weight_sum)
 
 
         return weight

@@ -28,7 +28,7 @@ public:
 	init(7.5, 1, mo, mm);
     }
 
-    bool is_hit(pyarr<double> &pose)
+    bool is_hit(vector<double> &pose)
     {
 	int coord0;
 	int coord1;
@@ -36,9 +36,9 @@ public:
 	return obs_map_object.is_hit(coord0, coord1);
     }
 
-    double get_log_p_z_given_pose_u(double z, pyarr<double> &pose)
+    double get_log_p_z_given_pose_u(double z, vector<double> &pose)
     {
-	assert(pose.dims[0] == 3);
+	assert(pose.size() == 3);
 	double z_expected = obs_map_object.get_z_expected(pose);
         double p_hit =   norm_const * exp(-pow(z - z_expected, 2) / (2 * sigma2));
 	
@@ -94,30 +94,29 @@ public:
 						       dtrans,
 						       drot2);
 	
-	vector<long int> dims;
-	dims.push_back(3);
-	pyarr<double> sample(dims);
-	sample[ind(0)] = drot1;
-	sample[ind(1)] = dtrans;
-	sample[ind(2)] = drot2;
-	pyarr<double> new_pose = motion_model_object.update_pose_with_sample(pose, sample);
-	new_pose[ind(2)] -= M_PI / 2.0;
+	vector<double> sample;
+	sample.push_back(drot1);
+	sample.push_back(dtrans);
+	sample.push_back(drot2);
+	vector<double> new_pose = motion_model_object.update_pose_with_sample(pose, sample);
+	new_pose[2] -= M_PI / 2.0;
 
 	if (is_hit(new_pose))
+	{
 	    return 0;
+	}
 
 	double delt_theta = M_PI / 180.0;
 
 	double log_weight_sum = 0;
 	
-	int idx = obs_map_object.lookup_ind_for_pose(new_pose);
 	for(size_t l_idx = 0; l_idx < laser.dims[0]; l_idx++)
 	{
 	    double z = laser[ind(l_idx)];
 	    log_weight_sum += get_log_p_z_given_pose_u(z, new_pose);
 
-	    new_pose[ind(2)] = true_mod(new_pose[ind(2)] + delt_theta,
-					2 * M_PI);
+	    new_pose[2] = true_mod(new_pose[2] + delt_theta,
+				   2 * M_PI);
 	}
 
 	double weight = exp(log_weight_sum);

@@ -17,7 +17,7 @@ import matplotlib.cm
 from numpy.random import multivariate_normal
 import vis_history
 
-from multiprocessing import Pool
+# from multiprocessing import Pool
 
 def isobservation(line):
     return line[0] == 'L'
@@ -256,7 +256,7 @@ def main():
                 print "updating weights..."
 
                 poses = numpy.array([p.pose.copy() for p in pc.particles])
-                pdb.set_trace()
+                # pdb.set_trace()
 
                 update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
                 weights = update_particle_weights_func(poses,
@@ -264,7 +264,11 @@ def main():
                                                        offset_norm.item(),
                                                        offset_arctan.item(),
                                                        numpy.array(laser, dtype = numpy.float64))
-                pdb.set_trace()
+
+                for (p_idx, p) in enumerate(pc.particles):
+                    p.weight *= weights[p_idx]
+
+                # pdb.set_trace()
                 # for p_idx, p in enumerate(pc.particles):
                 #   p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
 

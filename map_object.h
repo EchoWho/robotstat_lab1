@@ -13,9 +13,13 @@ public:
     void get_pose_coord(pyarr<double> &pose, int &coord0, int &coord1);
     bool is_hit(int coord0, int coord1);
 
-    double get_z_expected(pyarr<double> &pose);
+    double get_z_expected(vector<double> &pose);
     int lookup_ind_for_coord(int &coord0, int &coord1);
     int lookup_ind_for_pose(pyarr<double> &pose);
+    int lookup_ind_for_pose(vector<double> &pose);
+
+    void get_pose_coord(vector<double> &pose, int &coord0, int &coord1);
+    pyarr<double> get_grid();
 
     float hit_thresh;
     int resolution, n_angle_bins;
@@ -27,6 +31,7 @@ public:
 
     boost::python::object o;
     boost::python::dict coord_idx_lookup;
+    std::map<std::pair<int, int>, int> coord_idx_lookup2;
 };
 
 void boost_map_object();

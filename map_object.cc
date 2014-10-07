@@ -20,6 +20,20 @@ map_object::map_object(boost::python::dict map_obj_dict)
 
     o = boost::python::object(map_obj_dict);
     cout << "dictionary length: " << len(coord_idx_lookup) << endl;
+    cout << "hit thresh: " << hit_thresh << endl;
+
+    boost::python::list items = coord_idx_lookup.items();
+    for (size_t i =0; i < len(items); i++)
+    {
+	boost::python::object item = items[i];
+	boost::python::tuple key = boost::python::extract<boost::python::tuple>(item[0]);
+	int value = boost::python::extract<int>(item[1]);
+
+	int keyp_0 = boost::python::extract<int>(key[0]);
+	int keyp_1 = boost::python::extract<int>(key[1]);
+	std::pair<int, int> key_p = std::make_pair(keyp_0, keyp_1);
+	coord_idx_lookup2[key_p] = value;
+    }
 }
 
 void map_object::get_pose_coord(pyarr<double> &pose, int &coord0, int &coord1)
@@ -27,6 +41,13 @@ void map_object::get_pose_coord(pyarr<double> &pose, int &coord0, int &coord1)
     coord0 = int((pose[ind(0)] / resolution) + .5);
     coord1 = int((pose[ind(1)] / resolution) + .5);
 }
+
+void map_object::get_pose_coord(vector<double> &pose, int &coord0, int &coord1)
+{
+    coord0 = int((pose[0] / resolution) + .5);
+    coord1 = int((pose[1] / resolution) + .5);
+}
+
 
 bool map_object::is_hit(int coord0, int coord1)
 {
@@ -36,7 +57,7 @@ bool map_object::is_hit(int coord0, int coord1)
     return true;
 }
 
-int map_object::lookup_ind_for_pose(pyarr<double> &pose)
+int map_object::lookup_ind_for_pose(vector<double> &pose)
 {
     int coord0, coord1;
     get_pose_coord(pose, coord0, coord1);
@@ -44,26 +65,50 @@ int map_object::lookup_ind_for_pose(pyarr<double> &pose)
     return idx;
 }
 
+
 int map_object::lookup_ind_for_coord(int &coord0, int &coord1)
 {
-    return 0;
-    // boost::python::tuple t = boost::python::make_tuple(coord0, coord1);
-    // if (!coord_idx_lookup.has_key(t))
-    // {
-    // 	cout << "idx: " << coord0 << " " << coord1 << endl;
-    // 	cout << "length: " << len(coord_idx_lookup) << endl;
-    // 	throw std::runtime_error("coord not found!");
-    // }
-    // return boost::python::extract<int>(coord_idx_lookup.get(t));
+
+    std::pair<int, int> key = std::make_pair(coord0, coord1);
+    
+    if (coord_idx_lookup2.find(key) == coord_idx_lookup2.end())
+    {
+	cout << "didnt find: " << coord0 << " " << coord1 << endl;
+    	throw std::runtime_error("coord not found!");
+    }
+    
+    return coord_idx_lookup2.find(key)->second;
 }
 
-double map_object::get_z_expected(pyarr<double> &pose)
+// int map_object::lookup_ind_for_coord(int &coord0, int &coord1)
+// {
+
+//     boost::python::tuple t;
+// #pragma omp critical (tuple)
+//     t = boost::python::make_tuple(coord0, coord1);
+
+// #pragma omp critical (xkey)
+//     if (!coord_idx_lookup.has_key(t))
+//     {
+//     	cout << "idx: " << coord0 << " " << coord1 << endl;
+//     	cout << "length: " << len(coord_idx_lookup) << endl;
+//     	throw std::runtime_error("coord not found!");
+//     }
+
+// int idx;
+// #pragma omp critical (lookup)
+// idx = boost::python::extract<int>(coord_idx_lookup.get(t));
+
+// return idx;
+// }
+
+double map_object::get_z_expected(vector<double> &pose)
 {
     int coord0, coord1;
     get_pose_coord(pose, coord0, coord1);
     int idx = lookup_ind_for_coord(coord0, coord1);
 
-    double angle_mod = true_mod(pose[ind(2)], M_PI * 2);
+    double angle_mod = true_mod(pose[2], M_PI * 2);
     int angle_bin_idx = true_mod(int((angle_mod / angle_bins_step) + .5),
 				 n_angle_bins);
 
@@ -73,13 +118,17 @@ double map_object::get_z_expected(pyarr<double> &pose)
     return ray_lookup[ind(idx, angle_bin_idx)];
 }
 
-
+pyarr<double> map_object::get_grid()
+{
+    return grid;
+}
 
 void boost_map_object()
 {
     class_<map_object>("map_object", init<boost::python::dict>())
 	.def_readonly("hit_thresh", &map_object::hit_thresh)
 	.def_readonly("resolution", &map_object::resolution)
+	.def("get_grid", &map_object::get_grid)
 	;
 }
 
