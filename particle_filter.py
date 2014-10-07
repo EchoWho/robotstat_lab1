@@ -259,10 +259,18 @@ def main():
                 print "max weight: {}".format(new_weights.max())
                 max_pose = pc.particles[np.argmax(new_weights)].pose 
                 print "max weight location: {}".format( max_pose )
-                pose_debug = np.array([ 4000, 4140, numpy.pi ])
+                pose_debug = np.array([ 3975, 4130, numpy.pi ])
                 print "weight of {} is {} ".format( pose_debug, obs_model.get_weight(pose_debug, laser_pose_offset, offset_norm, offset_arctan, laser))
                 obs_view.vis_pose_and_laser(max_pose, laser)
-                obs_view.vis_pose_and_laser(pose_debug, laser)
+                #obs_view.vis_pose_and_laser(pose_debug, laser)
+                
+                #max_pose_new = max_pose
+                #max_pose_new[2] -= numpy.pi/2
+                #pose_debug_new = pose_debug
+                #pose_debug_new[2] -= numpy.pi/2
+                #vw1 = obs_model.get_vec_point_wise_weight(max_pose_new, laser)
+                #vw2 = obs_model.get_vec_point_wise_weight(pose_debug_new, laser)
+                #pdb.set_trace()
 
         elif not ismotion(line):
             raise RuntimeError("unknown line type!!!11!!!1")
@@ -276,7 +284,8 @@ def main():
             print "resampled"
             #update stuff
         
-        pc.show()
+        if l_idx % 10 == 0:
+            pc.show()
         print "lidx ", l_idx
         if l_idx % 1 == 0:
             numpy.savez_compressed(record_fn, pc.xy_record)

@@ -6,8 +6,9 @@ import gtkutils.img_util as iu
 from gtkutils.color_printer import gcp
 
 class map_obj(object):
-    def __init__(self, map_fn, n_angle_bins = 360):
+    def __init__(self, map_fn, n_angle_bins = 72):
         x = 0
+#        self.hit_thresh = 0.001
         self.hit_thresh = 0.8
 
         self.coord_idx_lookup = {}
@@ -40,11 +41,6 @@ class map_obj(object):
                         idx = len(self.valid_coordinates)
                         self.valid_coordinates.append((x, y))
                         self.coord_idx_lookup[(x, y)] = idx
-                        # print "idx: {}".format(idx)
-                        # print "length: {}".format(len(self.valid_coordinates))
-                        # print "valid coord: {}".format(self.valid_coordinates[-1])
-                        # print "coord idx lookup: {}".format(self.coord_idx_lookup[(x, y)])
-                        # print "valid coord from idx: {}".format(self.valid_coordinates[idx])
                 x += 1
 
         self.grid[self.grid == -1] = 0

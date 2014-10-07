@@ -36,22 +36,17 @@ class observation_view(object):
             x_data.append(numpy.cos(th) * z)
             y_data.append(numpy.sin(th) * z)
 
+        pose_new = pose
+        pose_new[2] -= numpy.pi / 2.0
         for zi in range(360):
-            z_expected = self.map_obj.get_z_expected(pose)
+            z_expected = self.map_obj.get_z_expected(pose_new)
             th = zi * numpy.pi / 180.0
             x_expected.append(numpy.cos(th) * z_expected)
             y_expected.append(numpy.sin(th) * z_expected)
 
-            pose[2] += 1.0 / 180.0 * numpy.pi
+            pose_new[2] += 1.0 / 180.0 * numpy.pi
             
-            # try: 
-            #     canvas[center[0] + x, center[0] + y] = 255
-            # except IndexError:
-            #     pass
-            # print x,y
-        
         data = numpy.array([x_data, y_data])
-        # canvas.transpose()
 #        pdb.set_trace()
         plt.figure(2)
         if self.lastscatter is not None:
@@ -63,11 +58,11 @@ class observation_view(object):
         self.lastscatter = plt.scatter(data[0, :], data[1, :], c='blue', edgecolors='none')
         self.lastexpected = plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
 
-        bound = 300
+        bound = 1200
         plt.axis([-bound, bound, -bound, bound])
         plt.draw()
 
-        pdb.set_trace()
+        #pdb.set_trace()
 
         
 
@@ -80,12 +75,13 @@ class observation_model:
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
       self.mu_expon = 0 # mean of exponential distribution
       self.spread_expon = 10
-      self.max_rng = 2000.0
+      self.min_rng = 100.0
+      self.max_rng = 1200.0
 
       # Relative weights of observation model components
-      self.c_hit = 20.0
-      self.c_short = 0.0
-      self.c_max = 1.0
+      self.c_hit = 4.0
+      self.c_short = 0.5
+      self.c_max = 0.5
       self.c_rand = 1.0 # keep this fixed.
       
       self.map_obj = map_obj
@@ -107,25 +103,48 @@ class observation_model:
         pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
 
         pose_new[2] -= numpy.pi / 2.0 
-        delt_theta = numpy.pi / 180.0
         
         # if the Laser pose is in the wall then the particle has weight 0
         if self.map_obj.is_hit(pose_new):
             return 0
-            
+
+        return self.get_point_wise_weight(pose_new, laser)
+#        return self.get_func_inner_product_weight(pose_new, laser)
+
+    def get_func_inner_product_weight(self, pose_new, laser):
+        delt_theta = numpy.pi / 180.0
+        
+        sums = np.zeros(3, dtype=np.float64)
+        for zi, z in enumerate(laser):
+            z_exp = self.Get_z_expected(pose_new)
+            sums[0] += z_exp * z
+            sums[1] += z_exp * z_exp
+            sums[2] += z * z
+            pose_new[2] = (pose_new[2] + delt_theta) % (2 *numpy.pi)
+        return sums[0] **2 / (sums[1] * sums[2])
+
+    def get_point_wise_weight(self, pose_new, laser):
+        delt_theta = numpy.pi / 180.0
         log_weight_sum = 0
         #bools = numpy.random.random(len(laser)) > self.sample_perc
-        bools = numpy.ones(len(laser), dtype=bool)
-
         for zi, z in enumerate(laser):
-            if bools[zi]:
+            if (zi % 5 == 0):
                 log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
-                #lw = self.Get_log_p_z_given_pose_u(z, pose_new)
-                #print "angle_{}_z_{}_prob_{}".format(zi, z, numpy.exp(lw))
-            pose_new[2] += (pose_new[2] + delt_theta) % (2 * numpy.pi)
+            pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
         weight = numpy.exp(log_weight_sum)
         return weight
+
+    def get_vec_point_wise_weight(self, pose_new, laser):
+        delt_theta = numpy.pi / 180.0
+        vec_weights = []
+        for zi, z in enumerate(laser):
+            vec_weights.append(numpy.exp(self.Get_log_p_z_given_pose_u(z, pose_new)))
+            pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
+
+        return vec_weights
+
+
 
     def Get_z_expected(self, pose):
         z = self.map_obj.get_z_expected(pose)
@@ -143,12 +162,6 @@ class observation_model:
         C_max = self.c_max
         C_rand = self.c_rand
         # Normalize to 1 (probability distribution should integrate to 1)
-#        sum_Cs = C_hit + C_short + C_max + C_rand
-#        C_hit = C_hit / sum_Cs
-#        C_short = C_short / sum_Cs
-#        C_max = C_max / sum_Cs
-#        C_rand = C_rand / sum_Cs
-
         # uniform is assumed to be 1
         p_z_given_x = 1
 
@@ -177,7 +190,7 @@ class observation_model:
         p = plt.plot(zs, data)
         # plt.axis([0, 8000, 0, 8000])
         plt.show(block = False)
-        pdb.set_trace()
+#        pdb.set_trace()
             
         
 
