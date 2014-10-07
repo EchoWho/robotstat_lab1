@@ -6,7 +6,7 @@ import gtkutils.img_util as iu
 from gtkutils.color_printer import gcp
 
 class map_obj(object):
-    def __init__(self, map_fn, n_angle_bins = 72):
+    def __init__(self, map_fn, n_angle_bins = 360):
         x = 0
         self.hit_thresh = 0.8
 
@@ -202,7 +202,7 @@ class map_obj(object):
 
 def main():
     map_file = 'data/map/wean.dat'
-    n_angle_bins = 72
+    n_angle_bins = 360
     mo = map_obj(map_file, n_angle_bins)
 
         

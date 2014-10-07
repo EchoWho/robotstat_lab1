@@ -153,7 +153,7 @@ def obs_update(args):
 
 def main():
 
-    fig = plt.figure(num = 1, figsize = (20, 20))
+    fig = plt.figure(num = 1, figsize = (10, 10))
 
 #    sf1 = fig.add_subplot(2,1,1)
 #    sf2 = fig.add_subplot(2,1,2)
@@ -175,7 +175,7 @@ def main():
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
-                             nbr_theta = 72,
+                             nbr_theta = 360,
                              fig_handle = fig)
 
     print "created particle collection"
@@ -195,9 +195,9 @@ def main():
     #print "showing pc"
     pc.show()
 
-#    pose = pc.particles[200].pose
-#    mo.vis_z_expected(pose)
-#    obs_model.vis_p_z_given_x_u(pose)
+    pose = pc.particles[200].pose
+    #mo.vis_z_expected(pose)
+    obs_model.vis_p_z_given_x_u(pose)
     
     for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
@@ -274,8 +274,12 @@ def main():
 
                 new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
-                print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
-
+                max_pose = pc.particles[np.argmax(new_weights)].pose 
+                print "max weight location: {}".format( max_pose )
+                pose_debug = np.array([ 4000, 4140, numpy.pi ])
+                print "weight of {} is {} ".format( pose_debug, obs_model.get_weight(pose_debug, laser_pose_offset, offset_norm, offset_arctan, laser))
+                obs_view.vis_pose_and_laser(max_pose, laser)
+                obs_view.vis_pose_and_laser(pose_debug, laser)
 
         elif not ismotion(line):
             raise RuntimeError("unknown line type!!!11!!!1")

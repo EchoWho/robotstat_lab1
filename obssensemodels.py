@@ -65,39 +65,43 @@ class observation_view(object):
         plt.figure(2)
         if self.lastscatter is not None:
             self.lastscatter.remove()
+            self.lastexpected.remove()
         f1 = plt.gca()
 #        plt.subplot(212)
         f1.clear()
         self.lastscatter = plt.scatter(data[0, :], data[1, :], c='blue', edgecolors='none')
-
-#        plt.hold()
-        plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
+        self.lastexpected = plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
 
         bound = 300
         plt.axis([-bound, bound, -bound, bound])
         plt.draw()
+
+        pdb.set_trace()
+
         
 
 class observation_model:
     
     def __init__(self, map_obj, cpp_motion_model):
-      self.sigma = 80 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
+      self.sigma = 50 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
+
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
       self.mu_expon = 0 # mean of exponential distribution
       self.spread_expon = 10
-      self.max_rng = [7000 , 8000] #need to calculate these
+      self.max_rng = 2000.0
 
       # Relative weights of observation model components
-      self.c_hit = 7.5
-      self.c_short = 0.0 
-      self.c_max = 0.0
-      self.c_rand = 1 # keep this fixed.
+      self.c_hit = 20.0
+      self.c_short = 0.0
+      self.c_max = 1.0
+      self.c_rand = 1.0 # keep this fixed.
+      
       self.map_obj = map_obj
 
       self.sample_perc = .5
-      
+
       self.ref_maintainer = copy.deepcopy(map_obj.__dict__)
       self.cpp_map_obj = lmo.map_object(self.ref_maintainer)
       self.cpp_observation_model = lom.observation_model(self.cpp_map_obj, cpp_motion_model)
@@ -106,8 +110,6 @@ class observation_model:
       self.cpp_motion_model = cpp_motion_model
       pdb.set_trace()
       
-      # self.compute_normalizer()
-
     def get_rot_mat(self, pose):
         theta = pose[2]
         cos_theta = numpy.cos(theta)
@@ -166,6 +168,7 @@ class observation_model:
     def Get_log_p_z_given_pose_u(self, z, pose):
         assert(len(pose) == 3)
         z_exp = self.Get_z_expected(pose)
+
         # Determine relative weights for each component in the observation model
         # Add in any parameter changes to the distribution based on u, z_expected
 #        pdb.set_trace()
@@ -180,39 +183,32 @@ class observation_model:
 #        C_max = C_max / sum_Cs
 #        C_rand = C_rand / sum_Cs
 
+        # uniform is assumed to be 1
+        p_z_given_x = 1
+
+        if (z > self.max_rng and z_exp > self.max_rng):
+          p_z_given_x += C_max 
+
         # p_hit =  stats.norm.pdf(z, loc=(z_exp + self.dmu), scale=self.sigma) # comp1_gauss
-        p_hit =   self.norm_const * numpy.exp(-(z - z_exp)**2 / (2 * self.sigma2))
+        p_hit = self.norm_const * numpy.exp(-(z - z_exp)**2 / (2 * self.sigma2))
 
         #p_short = stats.expon.pdf(z, self.mu_expon, self.spread_expon)
-        p_short =  1.0 + 1.0 / np.float64(z+1) 
-
-        # unif1 = stats.uniform(loc = self.max_rng[0], scale = (self.max_rng[1] - self.max_rng[0]) )
-        # p_max = unif1.pdf(z) # Uniform distribution
-
-        #unif1 = 1 / np.float64(self.max_rng[1] - self.max_rng[0])
-        #p_max = unif1 # Uniform distribution
-
-        # unif2 = stats.uniform( loc = 0, scale = (self.max_rng[1] - 0) )
-        # p_rand = unif2.pdf(z) # Uniform distr.
-
-        # unif2 =  1 / np.float64(self.max_rng[1])
-        unif2 = 1
-        p_rand = unif2
+        p_short =  1.0 / np.float64(z*1.55e-4+1.0) 
 
         # pdb.set_trace()
-        p_z_given_x = C_hit * p_hit + C_rand * p_rand + C_short * p_short 
+        p_z_given_x += C_hit * p_hit + C_short * p_short 
         
         return numpy.log(p_z_given_x)
 
     def vis_p_z_given_x_u(self, pose):
         data = []
-        zs = numpy.arange(0, 8000, 1)
+        zs = numpy.arange(0, self.max_rng + 100, 10)
         for z in zs:
-            pz = self.Get_p_z_given_pose_u(z, pose)
-            data.append(pz)
+            pz = self.Get_log_p_z_given_pose_u(z, pose)
+            data.append(numpy.exp(pz))
             
         f = plt.figure()
-        p = plt.scatter(zs, data)
+        p = plt.plot(zs, data)
         # plt.axis([0, 8000, 0, 8000])
         plt.show(block = False)
         pdb.set_trace()
