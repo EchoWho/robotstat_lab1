@@ -9,6 +9,15 @@ import matplotlib
 import numpy as np
 import gtkutils.img_util as iu
 import motion_model
+import copy
+
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import libobservation_model as lom
+    import libmap_object as lmo
+
 
 def mean_unif(a,b):
     return (a + b) / 2
@@ -42,7 +51,7 @@ class observation_view(object):
             x_expected.append(numpy.cos(th) * z_expected)
             y_expected.append(numpy.sin(th) * z_expected)
 
-            pose[2] += 1.0 / 180.0 * numpy.pi
+            pose[2] = 1.0 / 180.0 * numpy.pi
             
             # try: 
             #     canvas[center[0] + x, center[0] + y] = 255
@@ -71,7 +80,7 @@ class observation_view(object):
 
 class observation_model:
     
-    def __init__(self, map_obj):
+    def __init__(self, map_obj, cpp_motion_model):
       self.sigma = 80 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
@@ -88,6 +97,14 @@ class observation_model:
       self.map_obj = map_obj
 
       self.sample_perc = .5
+      
+      self.ref_maintainer = copy.deepcopy(map_obj.__dict__)
+      self.cpp_map_obj = lmo.map_object(self.ref_maintainer)
+      self.cpp_observation_model = lom.observation_model(self.cpp_map_obj, cpp_motion_model)
+
+      self.cpp_observation_model._check_lookup_size()
+      self.cpp_motion_model = cpp_motion_model
+      
       # self.compute_normalizer()
 
     def get_rot_mat(self, pose):
@@ -100,29 +117,45 @@ class observation_model:
         return rot_mat
 
     def get_weight(self, pose, laser_pose_offset, offset_norm, offset_arctan, laser):
-        drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
-            laser_pose_offset, offset_norm, offset_arctan)
-        pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
 
-        pose_new[2] -= numpy.pi / 2.0 
-        delt_theta = numpy.pi / 180.0
+        # print "pose new", pose_new
+        # pose_coord = self.map_obj.get_pose_coord(pose_new)
+        # print "pose coord", pose_coord
+        # print "z exp", self.map_obj.get_z_expected(pose_new)
+
+        weight = self.cpp_observation_model.get_weight(pose.copy(),
+                                                       numpy.array(laser_pose_offset, dtype = numpy.float64),
+                                                       offset_norm.item(),
+                                                       offset_arctan.item(),
+                                                       numpy.array(laser, dtype = numpy.float64))
+
+        # drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
+        #     laser_pose_offset, offset_norm, offset_arctan)
+        # pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
+        # pose_new[2] -= numpy.pi / 2.0 
+
+
+
+        # delt_theta = numpy.pi / 180.0
         
-        # if the Laser pose is in the wall then the particle has weight 0
-        if self.map_obj.is_hit(pose_new):
-            return 0
+        # # if the Laser pose is in the wall then the particle has weight 0
+        # if self.map_obj.is_hit(pose_new):
+        #     return 0
             
-        log_weight_sum = 0
-        #bools = numpy.random.random(len(laser)) > self.sample_perc
-        bools = numpy.ones(len(laser), dtype=bool)
+        # log_weight_sum = 0
+        # #bools = numpy.random.random(len(laser)) > self.sample_perc
+        # bools = numpy.ones(len(laser), dtype=bool)
 
-        for zi, z in enumerate(laser):
-            if bools[zi]:
-                log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
-                #lw = self.Get_log_p_z_given_pose_u(z, pose_new)
-                #print "angle_{}_z_{}_prob_{}".format(zi, z, numpy.exp(lw))
-            pose_new[2] += (pose_new[2] + delt_theta) % (2 * numpy.pi)
+        # for zi, z in enumerate(laser):
+        #     if bools[zi]:
+        #         log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
+        #         #lw = self.Get_log_p_z_given_pose_u(z, pose_new)
+        #         #print "angle_{}_z_{}_prob_{}".format(zi, z, numpy.exp(lw))
+        #     pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
-        weight = numpy.exp(log_weight_sum)
+        # weight = numpy.exp(log_weight_sum)
+
+
         return weight
 
     def Get_z_expected(self, pose):
