@@ -26,10 +26,11 @@ def std_unif(a,b):
     return (b - a) / numpy.sqrt(12.0)
 
 class observation_view(object):
-    def __init__(self, fig_handle, map_obj):
+    def __init__(self, fig_handle, map_obj, cpp_map_obj):
         self.fig_handle = fig_handle
         self.lastscatter = None
         self.map_obj = map_obj
+        self.cpp_map_obj = cpp_map_obj
 
     def vis_pose_and_laser(self, pose, laser):
         canvas = numpy.zeros((800, 800), dtype = numpy.uint8)
@@ -40,6 +41,7 @@ class observation_view(object):
         y_data = []
         x_expected = []
         y_expected = []
+
         for (zi, z) in enumerate(laser):
             th = zi * numpy.pi / 180.0
             x_data.append(numpy.cos(th) * z)
@@ -49,6 +51,10 @@ class observation_view(object):
         pose_new[2] -= numpy.pi / 2.0
         for zi in range(360):
             z_expected = self.map_obj.get_z_expected(pose_new)
+            cpp_z_expected = self.cpp_map_obj.py_get_z_expected(pose_new)
+            if abs(z_expected - cpp_z_expected) > 1e-4:
+                raise RuntimeError("NO WTF")
+
             th = zi * numpy.pi / 180.0
             x_expected.append(numpy.cos(th) * z_expected)
             y_expected.append(numpy.sin(th) * z_expected)
@@ -133,10 +139,26 @@ class observation_model:
         #                                                offset_arctan.item(),
         #                                                numpy.array(laser, dtype = numpy.float64))
 
+        ## used to sanity check the cpp
+        # l = self.cpp_motion_model.compute_relative_transform_float(pose, 
+        #                                                  numpy.array(laser_pose_offset,
+        #                                                              dtype = numpy.float64),
+        #                                                  offset_norm.item(), 
+        #                                                  offset_arctan.item())
+        # cpp_pose_new = self.cpp_motion_model.py_update_pose_with_sample(pose.copy(), 
+        #                                                                 numpy.array([drot1, dtrans, drot2],
+        #                                                                             dtype = numpy.float64))
+
+
+        
         drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
             laser_pose_offset, offset_norm, offset_arctan)
+
         pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
+
         pose_new[2] -= numpy.pi / 2.0 
+
+
         
         # if the Laser pose is in the wall then the particle has weight 0
         if self.map_obj.is_hit(pose_new) or self.map_obj.is_hit(pose):
@@ -160,9 +182,15 @@ class observation_model:
     def get_point_wise_weight(self, pose_new, laser):
         delt_theta = numpy.pi / 180.0
         log_weight_sum = 0
+
+        self.current_pw_weights = []
+        self.current_pose_new_log = []
+
         for zi, z in enumerate(laser):
             if (zi % 5 == 0):
-                log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
+                logpz = self.Get_log_p_z_given_pose_u(z, pose_new)
+                log_weight_sum += logpz
+                self.current_pw_weights.append(logpz)
             pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
         weight = numpy.exp(log_weight_sum)

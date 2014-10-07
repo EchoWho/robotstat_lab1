@@ -32,6 +32,9 @@ map_object::map_object(boost::python::dict map_obj_dict)
 	int keyp_0 = boost::python::extract<int>(key[0]);
 	int keyp_1 = boost::python::extract<int>(key[1]);
 	std::pair<int, int> key_p = std::make_pair(keyp_0, keyp_1);
+
+	if(coord_idx_lookup2.find(key_p) != coord_idx_lookup2.end())
+	    throw std::runtime_error("duplicate key!");
 	coord_idx_lookup2[key_p] = value;
     }
 }
@@ -102,15 +105,37 @@ int map_object::lookup_ind_for_coord(int &coord0, int &coord1)
 // return idx;
 // }
 
+double map_object::py_get_z_expected(pyarr<double> pose)
+{
+    vector<double> pose_vec;
+    pose_vec.push_back(pose[ind(0)]);
+    pose_vec.push_back(pose[ind(1)]);
+    pose_vec.push_back(pose[ind(2)]);
+
+    // cout << "cpppose" << pose_vec[0] <<endl;
+    // cout << "cpppose" << pose_vec[1] <<endl;
+    // cout << "cpppose" << pose_vec[2] <<endl;
+    return get_z_expected(pose_vec);
+}
+
 double map_object::get_z_expected(vector<double> &pose)
 {
     int coord0, coord1;
-    get_pose_coord(pose, coord0, coord1);
-    int idx = lookup_ind_for_coord(coord0, coord1);
 
-    double angle_mod = true_mod(pose[2], M_PI * 2);
+    get_pose_coord(pose, coord0, coord1);
+
+    int idx = lookup_ind_for_coord(coord0, coord1);
+    
+    double modder = M_PI * 2;
+
+    // cout << "pose[2], modder" << pose[2] << " " << modder;
+    double angle_mod = true_mod(pose[2], modder);
+
+    // cout << "   idx: " << idx << "  cpp angle mod "<< angle_mod;
     int angle_bin_idx = true_mod(int((angle_mod / angle_bins_step) + .5),
 				 n_angle_bins);
+
+    // cout << " cpp angle bin idx "   << angle_bin_idx << endl;
 
     assert(0<= idx && idx < ray_lookup.dims[0] &&
 	   0<= angle_bin_idx && angle_bin_idx < ray_lookup.dims[1]);
@@ -129,6 +154,7 @@ void boost_map_object()
 	.def_readonly("hit_thresh", &map_object::hit_thresh)
 	.def_readonly("resolution", &map_object::resolution)
 	.def("get_grid", &map_object::get_grid)
+	.def("py_get_z_expected", &map_object::py_get_z_expected)
 	;
 }
 
