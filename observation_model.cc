@@ -61,6 +61,8 @@ public:
 
 	double p_z_given_x = 1;
 
+
+
 	if (z > max_rng && z_expected > max_rng)
 	{
 	    p_z_given_x += c_max;
@@ -71,6 +73,9 @@ public:
 
 	p_z_given_x += c_hit * p_hit + c_short * p_short;
 
+	cout << "z: " << z << endl;
+	cout << "z_expected: " << z_expected << endl;
+	cout << "p_z_given_x " << p_z_given_x << endl;
 	// double p_z_given_x = c_hit * p_hit + c_rand * 1.0;
 	return log(p_z_given_x);
     }
@@ -87,8 +92,9 @@ public:
 	vector<long int> pose_dims;
 	pose_dims.push_back(3);
 	    
-	
-	#pragma omp parallel for
+
+	cout <<"offset norm: " << offset_norm << endl;
+	cout << " offset arctan: " << offset_arctan << endl;
 	for(size_t i =0; i < dims[0]; i++)
 	{
 
@@ -115,6 +121,7 @@ public:
 	double drot1, dtrans, drot2;
 	
 	assert(len(obs_map_object.coord_idx_lookup) > 0);
+	assert(laser.dims[0] == 180);
 	motion_model_object.compute_relative_transform(pose, 
 						       laser_pose_offset,
 						       offset_norm,

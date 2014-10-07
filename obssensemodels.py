@@ -40,6 +40,7 @@ class observation_view(object):
         y_data = []
         x_expected = []
         y_expected = []
+
         for (zi, z) in enumerate(laser):
             th = zi * numpy.pi / 180.0
             x_data.append(numpy.cos(th) * z)

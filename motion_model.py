@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import warnings
+import sys
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -48,7 +49,7 @@ class motion_model(object):
         self.motion_variance = 0
         self.Sigma = numpy.array([self.motion_variance, self.motion_variance, numpy.pi / 180. * deg_sigma]) * numpy.eye(3)
 
-        self.alpha1 = 1.2e-1
+        self.alpha1 = 0.5e-2
         self.alpha2 = 1e-2
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
@@ -65,7 +66,10 @@ class motion_model(object):
         return rot_mat
 
     def update(self, x0, u, u_norm, u_arctan):
+        print "original pose: ", x0.pose
+
         # x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+        # sys.exit()
         # return
 
         pose = x0.pose
@@ -76,11 +80,13 @@ class motion_model(object):
         drot2_sq = drot2**2
 
         sample = numpy.random.normal(size=(3,))
+
+
         sample = numpy.array( [drot1, dtrans, drot2] ) + \
             numpy.sqrt([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                         self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                         self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * sample 
-        
+
         new_pose = update_pose_with_sample(pose, sample)
         x0.pose = new_pose
 

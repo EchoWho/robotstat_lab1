@@ -53,20 +53,21 @@ class particle_collection(object):
         imgplot = plt.imshow(1 - map_orient, cmap = matplotlib.cm.gray)
         plt.show(block = False)
 
-        #for i in range(1):
-        #    delt= multivariate_normal(mean = np.array([0,0,0]), 
-        #        cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
-        #    self.particles.append(particle(numpy.array([4000, 
-        #                                                4140, 
-        #                                                numpy.pi]), 1.0))
-        for p_idx in range(n_particles):
-          pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
-          pos = vec_pos[pos_idx]
-          theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
-          self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
-                                                      self.map_obj.resolution * pos[1], 
-                                                      theta_i * unit_theta]),
-                                         1.0))
+        for i in range(1):
+           delt= multivariate_normal(mean = np.array([0,0,0]), 
+               cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
+           self.particles.append(particle(numpy.array([3975, 
+                                                       4100, 
+                                                       numpy.pi]), 1.0))
+
+        # for p_idx in range(n_particles):
+        #   pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
+        #   pos = vec_pos[pos_idx]
+        #   theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
+        #   self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
+        #                                               self.map_obj.resolution * pos[1], 
+        #                                               theta_i * unit_theta]),
+        #                                  1.0))
 
     def record_xy(self):
         print "recording xy"
@@ -103,9 +104,10 @@ class particle_collection(object):
         self.plot_xy(x, y)
         
     def plot_xy(self, x, y):
+
         plt.figure(1,figsize = (20, 20))
 #        plt.subplot(211)
-        self.last_scatter = plt.scatter(x, y, s = 4, c='red', marker='o', edgecolors='none')
+        self.last_scatter = plt.scatter(x, y, s = 10, c='red', marker='o', edgecolors='none')
         plt.axis([0, 800, 0, 800])
         plt.show(block = False)
         plt.draw()
@@ -195,10 +197,11 @@ def main():
     #print "showing pc"
     pc.show()
 
-    pose = pc.particles[200].pose
+    pose = pc.particles[0].pose
     #mo.vis_z_expected(pose)
     obs_model.vis_p_z_given_x_u(pose)
     
+    #todo remove start idx
     for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
 
@@ -255,22 +258,33 @@ def main():
 # IF not parallelizing
                 print "updating weights..."
 
-                poses = numpy.array([p.pose.copy() for p in pc.particles])
-                # pdb.set_trace()
-
-                update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
-                weights = update_particle_weights_func(poses,
-                                                       numpy.array(laser_pose_offset, dtype = numpy.float64),
-                                                       offset_norm.item(),
-                                                       offset_arctan.item(),
-                                                       numpy.array(laser, dtype = numpy.float64))
-
-                for (p_idx, p) in enumerate(pc.particles):
-                    p.weight *= weights[p_idx]
 
                 # pdb.set_trace()
-                # for p_idx, p in enumerate(pc.particles):
-                #   p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
+
+                use_cpp_version = False
+
+                if use_cpp_version:
+                    poses = numpy.array([p.pose.copy() for p in pc.particles])
+                    print "poses shape: ", poses.shape
+                    print "pyoffset norm: ", offset_norm
+                    print "pyoffset arctam: ", offset_arctan
+
+                    update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
+                    weights = update_particle_weights_func(poses,
+                                                           numpy.array(laser_pose_offset, 
+                                                                       dtype = numpy.float64),
+                                                           offset_norm.item(),
+                                                           offset_arctan.item(),
+                                                           numpy.array(laser, dtype = numpy.float64))
+
+                    if (weights.shape != (len(pc.particles),)):
+                        raise RuntimeError("cpp weights wrong dim!")
+                    for (p_idx, p) in enumerate(pc.particles):
+                        p.weight *= weights[p_idx]                
+                else:
+                    print "using python version"
+                    for p_idx, p in enumerate(pc.particles):
+                        p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
 
                 new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
@@ -279,6 +293,7 @@ def main():
                 pose_debug = np.array([ 3975, 4130, numpy.pi ])
                 print "weight of {} is {} ".format( pose_debug, obs_model.get_weight(pose_debug, laser_pose_offset, offset_norm, offset_arctan, laser))
                 obs_view.vis_pose_and_laser(max_pose, laser)
+                pdb.set_trace()
                 #obs_view.vis_pose_and_laser(pose_debug, laser)
                 
                 #max_pose_new = max_pose
@@ -313,5 +328,5 @@ def main():
         
 
 if __name__ == '__main__':
-    numpy.random.seed(seed=7111990)
+    numpy.random.seed(seed = 7111990)
     pdbw.pdbwrap(main)()
