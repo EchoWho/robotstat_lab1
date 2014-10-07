@@ -202,7 +202,7 @@ class map_obj(object):
 
 def main():
     map_file = 'data/map/wean.dat'
-    n_angle_bins = 72
+    n_angle_bins = 360
     mo = map_obj(map_file, n_angle_bins)
 
         
