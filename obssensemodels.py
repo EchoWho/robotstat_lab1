@@ -90,7 +90,7 @@ class observation_model:
 
       # Relative weights of observation model components
       self.c_hit = 4.0
-      self.c_short = 0.5
+      self.c_short = 0.0
       self.c_max = 0.5
       self.c_rand = 1.0 # keep this fixed.
       
@@ -100,11 +100,16 @@ class observation_model:
 
       self.ref_maintainer = copy.deepcopy(map_obj.__dict__)
       self.cpp_map_obj = lmo.map_object(self.ref_maintainer)
-      self.cpp_observation_model = lom.observation_model(self.cpp_map_obj, cpp_motion_model)
+
+
+      self.cpp_observation_model = lom.observation_model(self.c_hit, self.c_rand, self.c_short, self.c_max,
+                                                         self.max_rng, self.sigma,
+                                                         self.cpp_map_obj, cpp_motion_model)
+
+      # self.cpp_observation_model = lom.observation_model(self.cpp_map_obj, cpp_motion_model)
 
       self.cpp_observation_model._check_lookup_size()
       self.cpp_motion_model = cpp_motion_model
-      pdb.set_trace()
       
     def get_rot_mat(self, pose):
         theta = pose[2]

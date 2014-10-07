@@ -10,22 +10,39 @@ using std::endl;
 class observation_model{
 
 public:
-    void init(float c_hit, float c_rand, map_object mo, motion_model mm)
+    void init(float c_hit, float c_rand, float c_short, float c_max, 
+	      float max_rng, float sigma,
+	      map_object mo, motion_model mm)
     {
 	this->c_hit = c_hit;
 	this->c_rand = c_rand;
+	this->c_short = c_short;
+	this->c_max = c_max;
+
+	this->max_rng = max_rng;
+	this->sigma = sigma;
+	   
 	this->obs_map_object = mo;
 	this->motion_model_object = mm;
 
-	double sigma = 80;
+	alpha = (pow(10, 3) - 1) / max_rng;
 	norm_const = 1.0 / (sigma * sqrt(2 * M_PI));
 	sigma2 = pow(sigma, 2);
 	assert(len(obs_map_object.coord_idx_lookup) > 0);
     }
 
+    observation_model(float c_hit, float c_rand, float c_short, float c_max, 
+		      float max_rng, float sigma,
+		      map_object mo, motion_model mm)
+    {
+	init(c_hit, c_rand, c_short, c_max, 
+	      max_rng, sigma,
+	     mo, mm);
+    }
+
     observation_model(map_object mo, motion_model mm)
     {
-	init(7.5, 1, mo, mm);
+	init(4.0, 1, 0.1, 0.5, 1200.0, 50, mo, mm);
     }
 
     bool is_hit(vector<double> &pose)
@@ -41,8 +58,20 @@ public:
 	assert(pose.size() == 3);
 	double z_expected = obs_map_object.get_z_expected(pose);
         double p_hit =   norm_const * exp(-pow(z - z_expected, 2) / (2 * sigma2));
-	
-	double p_z_given_x = c_hit * p_hit + c_rand * 1.0;
+
+	double p_z_given_x = 1;
+
+	if (z > max_rng && z_expected > max_rng)
+	{
+	    p_z_given_x += c_max;
+	}
+
+
+	double p_short = 1.0 / double(1 + alpha * z);
+
+	p_z_given_x += c_hit * p_hit + c_short * p_short;
+
+	// double p_z_given_x = c_hit * p_hit + c_rand * 1.0;
 	return log(p_z_given_x);
     }
 
@@ -110,7 +139,8 @@ public:
 
 	double log_weight_sum = 0;
 	
-	for(size_t l_idx = 0; l_idx < laser.dims[0]; l_idx++)
+	int sample_skip = 5;
+	for(size_t l_idx = 0; l_idx < laser.dims[0]; l_idx += sample_skip)
 	{
 	    double z = laser[ind(l_idx)];
 	    log_weight_sum += get_log_p_z_given_pose_u(z, new_pose);
@@ -126,12 +156,11 @@ public:
     const map_object & get_obs_map_object() {return obs_map_object;}
     void check_lookup_size();
 
-    double c_hit;
-    double c_rand;
+    double c_hit, c_rand, c_short, c_max, max_rng, alpha;
     double hit_thresh;
     double resolution;
     double norm_const;
-    double sigma2;
+    double sigma, sigma2;
 
     map_object obs_map_object;
     motion_model motion_model_object;
@@ -150,7 +179,8 @@ BOOST_PYTHON_MODULE(libobservation_model)
     boost_map_object();
     
     class_<observation_model>("observation_model", init<map_object, motion_model>())
-	// .def(init<float, float, boost::python::object, boost::python::object>())
+
+	.def(init<float, float, float, float, float, float, map_object, motion_model>())
 	.def("get_weight", &observation_model::get_weight)
 	.def("update_particle_weights", &observation_model::update_particle_weights)
 	.def("_check_lookup_size", &observation_model::check_lookup_size)
