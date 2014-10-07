@@ -48,10 +48,10 @@ class motion_model(object):
         self.motion_variance = 0
         self.Sigma = numpy.array([self.motion_variance, self.motion_variance, numpy.pi / 180. * deg_sigma]) * numpy.eye(3)
 
-        self.alpha1 = 1.2e-1
-        self.alpha2 = 1e-2
-        self.alpha3 = .5e-2
-        self.alpha4 = 1e-8
+        self.alpha1 = 10e-2
+        self.alpha2 = 4e-2
+        self.alpha3 = 9e-3
+        self.alpha4 = 1e-3
 
         self.cpp_motion_model = lmm.motion_model()
 

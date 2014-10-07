@@ -139,7 +139,7 @@ class observation_model:
         pose_new[2] -= numpy.pi / 2.0 
         
         # if the Laser pose is in the wall then the particle has weight 0
-        if self.map_obj.is_hit(pose_new):
+        if self.map_obj.is_hit(pose_new) or self.map_obj.is_hit(pose):
             return 0
 
         return self.get_point_wise_weight(pose_new, laser)
