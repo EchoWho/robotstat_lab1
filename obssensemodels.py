@@ -9,6 +9,15 @@ import matplotlib
 import numpy as np
 import gtkutils.img_util as iu
 import motion_model
+import copy
+
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import libobservation_model as lom
+    import libmap_object as lmo
+
 
 def mean_unif(a,b):
     return (a + b) / 2
@@ -68,8 +77,9 @@ class observation_view(object):
 
 class observation_model:
     
-    def __init__(self, map_obj):
+    def __init__(self, map_obj, cpp_motion_model):
       self.sigma = 50 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
+
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
       self.dmu = 0 # bias; distance from expected signal -- used in gaussian for p_hit (comp1_gauss)
@@ -88,6 +98,14 @@ class observation_model:
 
       self.sample_perc = .5
 
+      self.ref_maintainer = copy.deepcopy(map_obj.__dict__)
+      self.cpp_map_obj = lmo.map_object(self.ref_maintainer)
+      self.cpp_observation_model = lom.observation_model(self.cpp_map_obj, cpp_motion_model)
+
+      self.cpp_observation_model._check_lookup_size()
+      self.cpp_motion_model = cpp_motion_model
+      pdb.set_trace()
+      
     def get_rot_mat(self, pose):
         theta = pose[2]
         cos_theta = numpy.cos(theta)
@@ -98,10 +116,21 @@ class observation_model:
         return rot_mat
 
     def get_weight(self, pose, laser_pose_offset, offset_norm, offset_arctan, laser):
+
+        # print "pose new", pose_new
+        # pose_coord = self.map_obj.get_pose_coord(pose_new)
+        # print "pose coord", pose_coord
+        # print "z exp", self.map_obj.get_z_expected(pose_new)
+
+        # weight = self.cpp_observation_model.get_weight(pose.copy(),
+        #                                                numpy.array(laser_pose_offset, dtype = numpy.float64),
+        #                                                offset_norm.item(),
+        #                                                offset_arctan.item(),
+        #                                                numpy.array(laser, dtype = numpy.float64))
+
         drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
             laser_pose_offset, offset_norm, offset_arctan)
         pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
-
         pose_new[2] -= numpy.pi / 2.0 
         
         # if the Laser pose is in the wall then the particle has weight 0
@@ -126,13 +155,14 @@ class observation_model:
     def get_point_wise_weight(self, pose_new, laser):
         delt_theta = numpy.pi / 180.0
         log_weight_sum = 0
-        #bools = numpy.random.random(len(laser)) > self.sample_perc
         for zi, z in enumerate(laser):
             if (zi % 5 == 0):
                 log_weight_sum += self.Get_log_p_z_given_pose_u(z, pose_new)
             pose_new[2] = (pose_new[2] + delt_theta) % (2 * numpy.pi)
 
         weight = numpy.exp(log_weight_sum)
+
+
         return weight
 
     def get_vec_point_wise_weight(self, pose_new, laser):

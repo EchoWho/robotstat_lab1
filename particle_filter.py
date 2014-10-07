@@ -17,7 +17,7 @@ import matplotlib.cm
 from numpy.random import multivariate_normal
 import vis_history
 
-from multiprocessing import Pool
+# from multiprocessing import Pool
 
 def isobservation(line):
     return line[0] == 'L'
@@ -157,7 +157,7 @@ def main():
 
 #    sf1 = fig.add_subplot(2,1,1)
 #    sf2 = fig.add_subplot(2,1,2)
-    thread_pool = Pool(16)
+    # thread_pool = Pool(16)
 
     map_file = 'data/map/wean.dat'
 
@@ -186,8 +186,9 @@ def main():
     num_new_observations = 0
     
     odom_control_gen = motion_model.odometry_control_generator()
-    obs_model = obssensemodels.observation_model(map_obj = mo)
+
     mm = motion_model.motion_model()
+    obs_model = obssensemodels.observation_model(map_obj = mo, cpp_motion_model = mm.cpp_motion_model)
     obs_view = obssensemodels.observation_view(fig_handle = fig, map_obj = mo)
 
     #mo.show()
@@ -252,8 +253,24 @@ def main():
 #            pc.particles = thread_pool.map(obs_update, obs_update_args) 
 
 # IF not parallelizing
-                for p_idx, p in enumerate(pc.particles):
-                  p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
+                print "updating weights..."
+
+                poses = numpy.array([p.pose.copy() for p in pc.particles])
+                # pdb.set_trace()
+
+                update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
+                weights = update_particle_weights_func(poses,
+                                                       numpy.array(laser_pose_offset, dtype = numpy.float64),
+                                                       offset_norm.item(),
+                                                       offset_arctan.item(),
+                                                       numpy.array(laser, dtype = numpy.float64))
+
+                for (p_idx, p) in enumerate(pc.particles):
+                    p.weight *= weights[p_idx]
+
+                # pdb.set_trace()
+                # for p_idx, p in enumerate(pc.particles):
+                #   p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
 
                 new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
@@ -284,9 +301,11 @@ def main():
             print "resampled"
             #update stuff
         
-        if l_idx % 10 == 0:
-            pc.show()
         print "lidx ", l_idx
+        if l_idx % 10 == 0:
+            print "updating display..."
+            pc.show()
+            print "updated"
         if l_idx % 1 == 0:
             numpy.savez_compressed(record_fn, pc.xy_record)
 

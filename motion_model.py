@@ -5,6 +5,11 @@ import numpy
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import libmotion_model as lmm
 
 def compute_relative_transform(pose, u, u_norm, u_arctan):
     drot1 = u_arctan - pose[2]
@@ -48,6 +53,8 @@ class motion_model(object):
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
+        self.cpp_motion_model = lmm.motion_model()
+
     def get_rot_mat(self, pose):
         theta = pose[2]
         cos_theta = math.cos(theta)
@@ -58,6 +65,9 @@ class motion_model(object):
         return rot_mat
 
     def update(self, x0, u, u_norm, u_arctan):
+        # x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+        # return
+
         pose = x0.pose
         drot1, dtrans, drot2 = compute_relative_transform(pose, u, u_norm, u_arctan)
 
