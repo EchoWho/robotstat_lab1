@@ -56,17 +56,19 @@ class observation_view(object):
         plt.figure(2)
         if self.lastscatter is not None:
             self.lastscatter.remove()
+            self.lastexpected.remove()
         f1 = plt.gca()
 #        plt.subplot(212)
         f1.clear()
         self.lastscatter = plt.scatter(data[0, :], data[1, :], c='blue', edgecolors='none')
-
-#        plt.hold()
-        plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
+        self.lastexpected = plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
 
         bound = 300
         plt.axis([-bound, bound, -bound, bound])
         plt.draw()
+
+        pdb.set_trace()
+
         
 
 class observation_model:
@@ -81,8 +83,8 @@ class observation_model:
       self.max_rng = 2000.0
 
       # Relative weights of observation model components
-      self.c_hit = 50.0
-      self.c_short = 0.1 
+      self.c_hit = 20.0
+      self.c_short = 0.0
       self.c_max = 1.0
       self.c_rand = 1.0 # keep this fixed.
       
