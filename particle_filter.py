@@ -53,21 +53,21 @@ class particle_collection(object):
         imgplot = plt.imshow(1 - map_orient, cmap = matplotlib.cm.gray)
         plt.show(block = False)
 
-        for i in range(1):
-           delt= multivariate_normal(mean = np.array([0,0,0]), 
-               cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
-           self.particles.append(particle(numpy.array([3975, 
-                                                       4100, 
-                                                       numpy.pi]), 1.0))
+        # for i in range(1):
+        #    delt= multivariate_normal(mean = np.array([0,0,0]), 
+        #        cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
+        #    self.particles.append(particle(numpy.array([3975, 
+        #                                                4100, 
+        #                                                numpy.pi]), 1.0))
 
-        # for p_idx in range(n_particles):
-        #   pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
-        #   pos = vec_pos[pos_idx]
-        #   theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
-        #   self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
-        #                                               self.map_obj.resolution * pos[1], 
-        #                                               theta_i * unit_theta]),
-        #                                  1.0))
+        for p_idx in range(n_particles):
+          pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
+          pos = vec_pos[pos_idx]
+          theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
+          self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
+                                                      self.map_obj.resolution * pos[1], 
+                                                      theta_i * unit_theta]),
+                                         1.0))
 
     def record_xy(self):
         print "recording xy"
@@ -191,7 +191,8 @@ def main():
 
     mm = motion_model.motion_model()
     obs_model = obssensemodels.observation_model(map_obj = mo, cpp_motion_model = mm.cpp_motion_model)
-    obs_view = obssensemodels.observation_view(fig_handle = fig, map_obj = mo)
+    obs_view = obssensemodels.observation_view(fig_handle = fig, map_obj = mo,
+                                               cpp_map_obj = obs_model.cpp_map_obj)
 
     #mo.show()
     #print "showing pc"
@@ -261,20 +262,17 @@ def main():
 
                 # pdb.set_trace()
 
-                use_cpp_version = False
+                use_cpp_version = True
 
                 if use_cpp_version:
+                    print "using cpp version"
                     poses = numpy.array([p.pose.copy() for p in pc.particles])
-                    print "poses shape: ", poses.shape
-                    print "pyoffset norm: ", offset_norm
-                    print "pyoffset arctam: ", offset_arctan
 
                     update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
                     weights = update_particle_weights_func(poses,
                                                            numpy.array(laser_pose_offset, 
                                                                        dtype = numpy.float64),
-                                                           offset_norm.item(),
-                                                           offset_arctan.item(),
+                                                           numpy.array([offset_norm, offset_arctan], dtype=numpy.float64),
                                                            numpy.array(laser, dtype = numpy.float64))
 
                     if (weights.shape != (len(pc.particles),)):
@@ -293,7 +291,7 @@ def main():
                 pose_debug = np.array([ 3975, 4130, numpy.pi ])
                 print "weight of {} is {} ".format( pose_debug, obs_model.get_weight(pose_debug, laser_pose_offset, offset_norm, offset_arctan, laser))
                 obs_view.vis_pose_and_laser(max_pose, laser)
-                pdb.set_trace()
+                # pdb.set_trace()
                 #obs_view.vis_pose_and_laser(pose_debug, laser)
                 
                 #max_pose_new = max_pose

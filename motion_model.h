@@ -30,6 +30,15 @@ public:
 				    double &dtrans,
 				    double &drot2);
 
+    boost::python::list py_update_pose_with_sample(pyarr<double> pose,
+						   pyarr<double> sample);
+
+
+    boost::python::list compute_relative_transform_float(pyarr<double> pose,
+							 pyarr<double> u,
+							 float u_norm,
+							 float u_arctan);
+
     vector<double> update_pose_with_sample(pyarr<double> &pose,
 					   vector<double> &sample);
 };

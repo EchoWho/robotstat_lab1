@@ -127,7 +127,10 @@ class map_obj(object):
     # output: expected z 
     def get_z_expected(self, pose):
         idx = self._lookup_ind_for_coord(self.get_pose_coord(pose))
+
+        # print "idx", idx
         angle_mod = pose[-1] % (numpy.pi * 2)
+        # print "angle mod", angle_mod
         angle_bin_idx = int((angle_mod / self.angle_bins_step) + .5 ) % self.n_angle_bins
 
         # print "vc[idx]: {}".format(self.valid_coordinates[idx])

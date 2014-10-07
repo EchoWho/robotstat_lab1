@@ -61,8 +61,6 @@ public:
 
 	double p_z_given_x = 1;
 
-
-
 	if (z > max_rng && z_expected > max_rng)
 	{
 	    p_z_given_x += c_max;
@@ -73,17 +71,16 @@ public:
 
 	p_z_given_x += c_hit * p_hit + c_short * p_short;
 
-	cout << "z: " << z << endl;
-	cout << "z_expected: " << z_expected << endl;
-	cout << "p_z_given_x " << p_z_given_x << endl;
+	// cout << "z: " << z << endl;
+	// cout << "z_expected: " << z_expected << endl;
+	// cout << "p_z_given_x " << p_z_given_x << endl;
 	// double p_z_given_x = c_hit * p_hit + c_rand * 1.0;
 	return log(p_z_given_x);
     }
 
     pyarr<double> update_particle_weights(pyarr<double> poses,
 					  pyarr<double> laser_pose_offset,
-					  float offset_norm,
-					  float offset_arctan,
+					  pyarr<double> offsets,
 					  pyarr<double> laser)
     {
 	vector<long int> dims;
@@ -92,9 +89,13 @@ public:
 	vector<long int> pose_dims;
 	pose_dims.push_back(3);
 	    
+	double offset_norm = offsets[ind(0)];
+	double offset_arctan = offsets[ind(1)];
 
-	cout <<"offset norm: " << offset_norm << endl;
-	cout << " offset arctan: " << offset_arctan << endl;
+	// cout <<"offset norm: " << offset_norm << endl;
+	// cout << " offset arctan: " << offset_arctan << endl;
+
+	cout << "dims[0]" << dims[0] << endl;
 	for(size_t i =0; i < dims[0]; i++)
 	{
 
@@ -114,8 +115,8 @@ public:
 
     double get_weight(pyarr<double> pose,
 		      pyarr<double> laser_pose_offset,
-		      float offset_norm,
-		      float offset_arctan,
+		      double offset_norm,
+		      double offset_arctan,
 		      pyarr<double> laser)
     {
 	double drot1, dtrans, drot2;
