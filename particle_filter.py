@@ -53,18 +53,16 @@ class particle_collection(object):
         imgplot = plt.imshow(1 - map_orient, cmap = matplotlib.cm.gray)
         plt.show(block = False)
 
-        # for i in range(200):
-        #     delt= multivariate_normal(mean = np.array([0,0,0]), 
-        #         cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
-        #     self.particles.append(particle(numpy.array([4000, 
-        #                                                 4000, 
-        #                                                 0]), 1.0))
-     
+        #for i in range(1):
+        #    delt= multivariate_normal(mean = np.array([0,0,0]), 
+        #        cov = numpy.diag([50, 50, 10 / 180.0 * numpy.pi]))
+        #    self.particles.append(particle(numpy.array([4000, 
+        #                                                4140, 
+        #                                                numpy.pi]), 1.0))
         for p_idx in range(n_particles):
           pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
           pos = vec_pos[pos_idx]
           theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
-
           self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
                                                       self.map_obj.resolution * pos[1], 
                                                       theta_i * unit_theta]),
@@ -173,11 +171,11 @@ def main():
 
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 1000
+    n_particles = 3000
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
-                             nbr_theta = 50,
+                             nbr_theta = 72,
                              fig_handle = fig)
 
     print "created particle collection"
@@ -190,23 +188,22 @@ def main():
     odom_control_gen = motion_model.odometry_control_generator()
     obs_model = obssensemodels.observation_model(map_obj = mo)
     mm = motion_model.motion_model()
-    obs_view = obssensemodels.observation_view(fig_handle = fig)
+    obs_view = obssensemodels.observation_view(fig_handle = fig, map_obj = mo)
 
-    # mo.show()
+    #mo.show()
     #print "showing pc"
-    #pc.show()
+    pc.show()
 
-    # pose = pc.particles[200].pose
-    # mo.vis_z_expected(pose)
-    # obs_model.vis_p_z_given_x_u(pose)
+#    pose = pc.particles[200].pose
+#    mo.vis_z_expected(pose)
+#    obs_model.vis_p_z_given_x_u(pose)
     
-    #todo
     for (l_idx, line) in enumerate(log.lines[58:]):
         line = line.split()
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
 
-        if ismotion(line) or isobservation(line):
+        if ismotion(line): #or isobservation(line):
             num_new_motions += have_moved
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
             u = odom_control_gen.calculate_u(pose)
@@ -220,20 +217,28 @@ def main():
             print "computing motion model.."
             for p in pc.particles: 
                 mm.update(p, u, u_norm, u_arctan)
+                #pass
 
         if isobservation(line):
            #  combine 1.1. and 1.2 as P(Z |X) = func(map_obj, cur_pose)
             laser_pose_offset = (np.float64(line[4]) - np.float64(line[1]), 
                                  np.float64(line[5]) - np.float64(line[2]), 
                                  np.float64(line[6]) - np.float64(line[3]))
+            offset_norm = numpy.linalg.norm(laser_pose_offset[:2])
+            offset_arctan = numpy.arctan2(laser_pose_offset[1], laser_pose_offset[0])
 
             laser = [ ]
             laser_start = 7
             n_in_wall = 0
             for i in range(180):
                 laser.append(np.float64(line[i + laser_start]))
-            # obs_view.vis_pose_and_laser(pose, laser)
-            
+
+            print numpy.max(laser)
+
+            #pose = pc.particles[0].pose
+            #mo.vis_z_expected(pose)
+            #obs_view.vis_pose_and_laser(pose, laser)
+            #print (pose)
 
             if first_obs_at_pos:
                 num_new_observations += first_obs_at_pos
@@ -248,9 +253,9 @@ def main():
 
 # IF not parallelizing
                 for p_idx, p in enumerate(pc.particles):
-                  p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, laser)
+                  p.weight *= obs_model.get_weight(p.pose, laser_pose_offset, offset_norm, offset_arctan, laser)
 
-                  new_weights = pc.get_weights()
+                new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
                 print "max weight location: {}".format( pc.particles[np.argmax(new_weights)].pose )
 
@@ -269,7 +274,7 @@ def main():
         
         pc.show()
         print "lidx ", l_idx
-        if l_idx % 40 == 0:
+        if l_idx % 1 == 0:
             numpy.savez_compressed(record_fn, pc.xy_record)
 
     vis_history.vis_collection(record_fn)

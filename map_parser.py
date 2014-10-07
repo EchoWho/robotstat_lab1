@@ -6,7 +6,7 @@ import gtkutils.img_util as iu
 from gtkutils.color_printer import gcp
 
 class map_obj(object):
-    def __init__(self, map_fn, n_angle_bins = 36):
+    def __init__(self, map_fn, n_angle_bins = 72):
         x = 0
         self.hit_thresh = 0.8
 
@@ -180,7 +180,6 @@ class map_obj(object):
         xs, ys = eight_neighborhood(start_coord[0], start_coord[1])
         # canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
         canvas[xs, ys, :] = [0, 255, 0]
-
         iu.v(canvas)
 
     def vis_particles(self, particles):
@@ -212,8 +211,11 @@ def main():
 def eight_neighborhood(x, y):
     xs = [x - 1, x - 1, x - 1, x, x, x, x + 1, x + 1, x + 1]
     ys = [y - 1, y, y + 1, y - 1, y, y + 1, y - 1, y, y + 1]
+    xs = [ x if x >=0 else 0 for x in xs ]
+    xs = [ x if x < 800 else 799 for x in xs ]
+    ys = [ y if y >=0 else 0 for y in ys ]
+    ys = [ y if y < 800 else 799 for y in ys ]
     return xs, ys
-    # return [x], [y]
             
 
             
