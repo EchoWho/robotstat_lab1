@@ -4,14 +4,12 @@
 
 class motion_model{
 public:
-    motion_model()
-    {
-	alpha1 = 2.2e-1;//0.5e-2;
-	alpha2 = 2.2e-1;//1e-2;
-	alpha3 = .5e-2;
-	alpha4 = 1e-8;
-    }
+motion_model(float alpha1, float alpha2, float alpha3, float alpha4)
+    : alpha1(alpha1) , alpha2(alpha2), alpha3(alpha3), alpha4(alpha4) {}
     
+
+    motion_model() {}
+
     double alpha1;
     double alpha2;
     double alpha3;
