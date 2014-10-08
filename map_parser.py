@@ -1,4 +1,5 @@
 import math, copy, os
+import flood_fill
 import numpy
 import numpy as np
 import pdb
@@ -14,8 +15,8 @@ except ImportError:
 class map_obj(object):
     def __init__(self, map_fn, n_angle_bins = 360):
         x = 0
-#        self.hit_thresh = 0.001
-        self.hit_thresh = 0.8
+        self.hit_thresh = 0.998
+    #    self.hit_thresh = 0.8
 
         self.coord_idx_lookup = {}
 
@@ -52,6 +53,24 @@ class map_obj(object):
         self.grid[self.grid == -1] = 0
         self.hit_map = self.grid <= self.hit_thresh
         self.free_map = 1 - self.hit_map 
+
+        self.do_ff = False
+        if self.do_ff:
+            ffgrid = 0 - self.hit_map.copy() 
+            if ffgrid[400, 400] != 0:
+                print "starting is not 0. Error!!!!!"
+            flood_fill.flood_fill(400, 400, ffgrid)
+            self.coord_idx_lookup = {}
+            self.valid_coordinates = []
+            for x in range(self.mapsize_x):
+                for y in range(self.mapsize_y):
+                    if ffgrid[x,y] == 1:
+                        idx = len(self.valid_coordinates)
+                        self.valid_coordinates.append((x,y))
+                        self.coord_idx_lookup[(x,y)] = idx
+                    if ffgrid[x,y] == 0:
+                        self.hit_map[x,y] = 1
+                        self.free_map[x,y] = 0
 
         assert(len(self.valid_coordinates) > 0)
 
@@ -207,7 +226,7 @@ class map_obj(object):
 
 def main():
     map_file = 'data/map/wean.dat'
-    n_angle_bins = 360
+    n_angle_bins = 72
     mo = map_obj(map_file, n_angle_bins)
 
         

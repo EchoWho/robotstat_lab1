@@ -340,7 +340,6 @@ def main():
 # IF not parallelizing
                 print "updating weights..."
 
-
                 # pdb.set_trace()
 
                 py_weights = []
