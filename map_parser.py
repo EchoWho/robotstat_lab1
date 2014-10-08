@@ -3,8 +3,14 @@ import flood_fill
 import numpy
 import numpy as np
 import pdb
-import gtkutils.img_util as iu
-from gtkutils.color_printer import gcp
+
+try:
+    import gtkutils.img_util as iu
+except ImportError:
+    class iu:
+        @staticmethod
+        def v(self):
+            raise ImportError("gtkutils.img_util not imported, can't do iu.v")
 
 class map_obj(object):
     def __init__(self, map_fn, n_angle_bins = 360):
@@ -76,7 +82,7 @@ class map_obj(object):
                                                           int(100 * self.hit_thresh))
 
         if not os.path.isfile(rays_fn):
-            gcp.gtime(self.preprocess_rays)
+            self.preprocess_rays()
             numpy.savez_compressed(rays_fn, self.ray_lookup)
         else:
             self.ray_lookup = numpy.load(rays_fn)['arr_0']

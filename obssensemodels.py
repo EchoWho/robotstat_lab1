@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-import gtkutils.img_util as iu
 import motion_model
 import copy
 
@@ -128,7 +127,7 @@ class observation_model:
                             [0,0,1]])
         return rot_mat
 
-    def get_weight(self, pose, laser_pose_offset, offset_norm, offset_arctan, laser):
+    def get_weight(self, pose, laser_pose_offset, offset_norm, offset_arctan, faux_last_odom_theta,laser):
 
         # print "pose new", pose_new
         # pose_coord = self.map_obj.get_pose_coord(pose_new)
@@ -153,25 +152,21 @@ class observation_model:
 
 
         
-        drot1, dtrans, drot2 = motion_model.compute_relative_transform(pose, 
-            laser_pose_offset, offset_norm, offset_arctan)
+        drot1, dtrans, drot2 = motion_model.compute_relative_transform(laser_pose_offset, 
+                                                                       offset_norm, 
+                                                                       offset_arctan,
+                                                                       last_odom_theta = faux_last_odom_theta)
 
         pose_new = motion_model.update_pose_with_sample(pose, [drot1, dtrans, drot2])
 
         pose_new[2] -= numpy.pi / 2.0 
-
-
         
         # if the Laser pose is in the wall then the particle has weight 0
         if self.map_obj.is_hit(pose_new) or self.map_obj.is_hit(pose):
             return 0
-
-        print "cheating"
-        return 1
-
         
-        # return self.get_point_wise_weight(pose_new, laser)
-        return self.get_func_inner_product_weight(pose_new, laser)
+        return self.get_point_wise_weight(pose_new, laser)
+        # return self.get_func_inner_product_weight(pose_new, laser)
        
     def get_func_inner_product_weight(self, pose_new, laser):
         delt_theta = numpy.pi / 180.0

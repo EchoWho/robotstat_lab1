@@ -83,7 +83,8 @@ public:
     pyarr<double> update_particle_weights(pyarr<double> poses,
 					  pyarr<double> laser_pose_offset,
 					  pyarr<double> offsets,
-					  pyarr<double> laser)
+					  pyarr<double> laser,
+					  float faux_last_odom_theta)
     {
 	vector<long int> dims;
 	dims.push_back(poses.dims[0]);
@@ -114,6 +115,7 @@ public:
 					 laser_pose_offset,
 					 offset_norm,
 					 offset_arctan,
+					 faux_last_odom_theta,
 					 laser);
 	}
 	return weights;
@@ -123,6 +125,7 @@ public:
 		      pyarr<double> laser_pose_offset,
 		      double offset_norm,
 		      double offset_arctan,
+		      double faux_last_odom_theta,
 		      pyarr<double> laser)
     {
 	double drot1, dtrans, drot2;
@@ -130,7 +133,7 @@ public:
 	assert(len(obs_map_object.coord_idx_lookup) > 0);
 	assert(laser.dims[0] == 180);
 
-	motion_model_object.compute_relative_transform(pose, 
+	motion_model_object.compute_relative_transform(faux_last_odom_theta,
 						       laser_pose_offset,
 						       offset_norm,
 						       offset_arctan,

@@ -18,27 +18,27 @@ boost::random::mt19937 rng;
 boost::variate_generator<boost::mt19937&, 
 			     boost::normal_distribution<> > normal_generator(rng, normal_dist);
 
-boost::python::list motion_model::compute_relative_transform_float(pyarr<double> pose,
-								   pyarr<double> u,
-								   float u_norm,
-								   float u_arctan)
-{
-    double drot1, dtrans, drot2;
-    compute_relative_transform(pose,
-			       u,
-			       u_norm,
-			       u_arctan,
-			       drot1,
-			       dtrans,
-			       drot2);
-    boost::python::list l;
-    l.append(drot1);
-    l.append(dtrans);
-    l.append(drot2);
-    return l;
-}
+// boost::python::list motion_model::compute_relative_transform_float(pyarr<double> pose,
+// 								   pyarr<double> u,
+// 								   float u_norm,
+// 								   float u_arctan)
+// {
+//     double drot1, dtrans, drot2;
+//     compute_relative_transform(pose,
+// 			       u,
+// 			       u_norm,
+// 			       u_arctan,
+// 			       drot1,
+// 			       dtrans,
+// 			       drot2);
+//     boost::python::list l;
+//     l.append(drot1);
+//     l.append(dtrans);
+//     l.append(drot2);
+//     return l;
+// }
 
-void motion_model::compute_relative_transform(pyarr<double> &pose,
+void motion_model::compute_relative_transform(double last_odom_theta,
 				pyarr<double> &u,
 				float u_norm,
 				float u_arctan,
@@ -46,7 +46,7 @@ void motion_model::compute_relative_transform(pyarr<double> &pose,
 				double &dtrans,
 				double &drot2)
 {
-    drot1 = u_arctan - pose[ind(2)];
+    drot1 = u_arctan - last_odom_theta;
     dtrans = (double)u_norm;
     drot2 = u[ind(2)] - drot1;
 }
@@ -93,11 +93,12 @@ vector<double> motion_model::update_pose_with_sample(pyarr<double> &pose,
 pyarr<double> motion_model::update(pyarr<double> pose, 
 				   pyarr<double> u,
 				   float u_norm,
-				   float u_arctan)
+				   float u_arctan,
+				   float last_odom_theta)
 {
     double drot1, dtrans, drot2;
     
-    compute_relative_transform(pose,
+    compute_relative_transform(last_odom_theta,
 			       u,
 			       u_norm,
 			       u_arctan,
@@ -135,7 +136,7 @@ BOOST_PYTHON_MODULE(libmotion_model)
     
     class_<motion_model>("motion_model", init<float, float, float, float>())
 	.def("update", &motion_model::update)
-	.def("compute_relative_transform_float", &motion_model::compute_relative_transform_float)
+	// .def("compute_relative_transform_float", &motion_model::compute_relative_transform_float)
 	.def("py_update_pose_with_sample", &motion_model::py_update_pose_with_sample)
 	;
 }
