@@ -12,8 +12,8 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import libmotion_model as lmm
 
-def compute_relative_transform(pose, u, u_norm, u_arctan):
-    drot1 = u_arctan - pose[2]
+def compute_relative_transform(u, u_norm, u_arctan, last_odom_theta):
+    drot1 = u_arctan - last_odom_theta
     dtrans = u_norm
     drot2 = u[2] - drot1
     return drot1, dtrans, drot2
@@ -33,15 +33,18 @@ class odometry_control_generator(object):
     def __init__(self):
       self.last_odom = None
 
-    def calculate_u(self, new_pose):
+    def calculate_u_and_theta(self, new_pose):
         assert(new_pose is not None)
 
         if self.last_odom is None:
             u = numpy.array(( 0, 0, 0 ), dtype = numpy.float64)
+            th = new_pose[2]
         else:
             u = new_pose - self.last_odom  
+            th = self.last_odom[2]
+
         self.last_odom = new_pose
-        return u
+        return u, th
         
 class motion_model(object):
     def __init__(self):
@@ -57,10 +60,10 @@ class motion_model(object):
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
-        self.alpha1 = 1e-3 * 0
-        self.alpha2 = 5e-3 * 0
-        self.alpha3 = 1e-3 * 0 
-        self.alpha4 = 1e-8 * 0
+        self.alpha1 = 1e-3 
+        self.alpha2 = 5e-3 
+        self.alpha3 = 1e-3  
+        self.alpha4 = 1e-8 
 
 
 
@@ -75,16 +78,21 @@ class motion_model(object):
                             [0,0,1]])
         return rot_mat
 
-    def update(self, x0, u, u_norm, u_arctan, use_cpp_motion_model, vis_motion_model = False):
+    def update(self, x0, u, u_norm, u_arctan, last_odom_theta, use_cpp_motion_model, vis_motion_model = False):
         # print "original pose: ", x0.pose
 
         if use_cpp_motion_model and not vis_motion_model:
-            x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+            x0.pose = self.cpp_motion_model.update(x0.pose.copy(), 
+                                                   u.copy(), 
+                                                   float(u_norm), 
+                                                   float(u_arctan),
+                                                   float(last_odom_theta))
             return
 
         pose = x0.pose
 
-        drot1, dtrans, drot2 = compute_relative_transform(pose, u, u_norm, u_arctan)
+        drot1, dtrans, drot2 = compute_relative_transform(u, u_norm, u_arctan, 
+                                                          last_odom_theta = last_odom_theta)
 
         drot1_sq = drot1**2
         dtrans_sq = dtrans**2

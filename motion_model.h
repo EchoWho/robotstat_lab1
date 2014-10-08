@@ -18,9 +18,10 @@ motion_model(float alpha1, float alpha2, float alpha3, float alpha4)
     pyarr<double> update(pyarr<double> pose,
 			 pyarr<double> u,
 			 float u_norm,
-			 float u_arctan);
+			 float u_arctan,
+			 float last_odom_theta);
 
-    void compute_relative_transform(pyarr<double> &pose,
+    void compute_relative_transform(double last_odom_theta,
 				    pyarr<double> &u,
 				    float u_norm,
 				    float u_arctan,
@@ -31,10 +32,10 @@ motion_model(float alpha1, float alpha2, float alpha3, float alpha4)
     boost::python::list py_update_pose_with_sample(pyarr<double> pose,
 						   pyarr<double> sample);
 
-    boost::python::list compute_relative_transform_float(pyarr<double> pose,
-							 pyarr<double> u,
-							 float u_norm,
-							 float u_arctan);
+    /* boost::python::list compute_relative_transform_float(pyarr<double> pose, */
+    /* 							 pyarr<double> u, */
+    /* 							 float u_norm, */
+    /* 							 float u_arctan); */
 
     vector<double> update_pose_with_sample(pyarr<double> &pose,
 					   vector<double> &sample);
