@@ -54,7 +54,12 @@ class motion_model(object):
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
-        self.cpp_motion_model = lmm.motion_model()
+        self.alpha1 = 1e-3
+        self.alpha2 = 5e-2
+        self.alpha3 = .5e-2
+        self.alpha4 = 1e-5
+
+        self.cpp_motion_model = lmm.motion_model(self.alpha1, self.alpha2, self.alpha3, self.alpha4)
 
     def get_rot_mat(self, pose):
         theta = pose[2]
@@ -72,6 +77,7 @@ class motion_model(object):
         return
 
         pose = x0.pose
+
         drot1, dtrans, drot2 = compute_relative_transform(pose, u, u_norm, u_arctan)
 
         drot1_sq = drot1**2
@@ -89,7 +95,7 @@ class motion_model(object):
         new_pose = update_pose_with_sample(pose, sample)
         x0.pose = new_pose
 
-        if 0 and numpy.linalg.norm(u[:2]) > 0:
+        if 1 and numpy.linalg.norm(u[:2]) > 0:
             sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                                  self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                                  self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \

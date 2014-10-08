@@ -133,7 +133,7 @@ BOOST_PYTHON_MODULE(libmotion_model)
     import_array();
     boost_common();
     
-    class_<motion_model>("motion_model", init<>())
+    class_<motion_model>("motion_model", init<float, float, float, float>())
 	.def("update", &motion_model::update)
 	.def("compute_relative_transform_float", &motion_model::compute_relative_transform_float)
 	.def("py_update_pose_with_sample", &motion_model::py_update_pose_with_sample)

@@ -1,4 +1,4 @@
-import os, sys, pdb
+import os, sys, pdb, signal, time
 
 import gtkutils.img_util as iu
 import map_parser
@@ -134,9 +134,13 @@ class particle_collection(object):
         idx = 0
         selected = []
 
+        angle_var = 10 * numpy.pi / 180
+        angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
+        
         for i in range(M):
           selected.append(copy.deepcopy(self.particles[idx]))
           selected[-1].weight = 1        
+          selected[-1].pose[2] += angle_vars[i]
           w += inc
           while idx < len(w_cumsums) and w >= w_cumsums[idx]:
             idx += 1
@@ -173,7 +177,7 @@ def main():
 
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 3000
+    n_particles = 5000
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
@@ -189,6 +193,7 @@ def main():
     
     odom_control_gen = motion_model.odometry_control_generator()
 
+    
     mm = motion_model.motion_model()
     obs_model = obssensemodels.observation_model(map_obj = mo, cpp_motion_model = mm.cpp_motion_model)
     obs_view = obssensemodels.observation_view(fig_handle = fig, map_obj = mo,
@@ -199,11 +204,14 @@ def main():
     pc.show()
 
     pose = pc.particles[0].pose
-    #mo.vis_z_expected(pose)
-    obs_model.vis_p_z_given_x_u(pose)
+
+    # changing cpp params won't affect these...
+    # mo.vis_z_expected(pose)
+    # obs_model.vis_p_z_given_x_u(pose)
+    # pdb.set_trace()
     
     #todo remove start idx
-    for (l_idx, line) in enumerate(log.lines[58:]):
+    for (l_idx, line) in enumerate(log.lines):
         line = line.split()
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
@@ -221,6 +229,7 @@ def main():
 
             print "computing motion model.."
             for p in pc.particles: 
+                p.pose[2] = 7 * 2 * numpy.pi / 8
                 mm.update(p, u, u_norm, u_arctan)
                 #pass
 
@@ -294,8 +303,8 @@ def main():
                         py_weights.append(one_weight)
                         p.weight *= one_weight
                     
-                    py_weights = numpy.array(py_weights)
-                    pdb.set_trace()
+                    # py_weights = numpy.array(py_weights)
+                    # pdb.set_trace()
 
                 new_weights = pc.get_weights()
                 print "max weight: {}".format(new_weights.max())
@@ -323,7 +332,11 @@ def main():
             num_new_observations = 0
             
             print "resampling..."
-            pc.resample()
+
+            try:
+                pc.resample()
+            except AssertionError:
+                vis_history.vis_collection(record_fn)                
             print "resampled"
             #update stuff
         
@@ -337,8 +350,12 @@ def main():
             numpy.savez_compressed(record_fn, pc.xy_record)
 
     vis_history.vis_collection(record_fn)
-        
+
+def signal_handler(signal, frame):
+    time.sleep(2)
+    sys.exit()
 
 if __name__ == '__main__':
     numpy.random.seed(seed = 7111990)
+    signal.signal(signal.SIGINT, signal_handler)        
     pdbw.pdbwrap(main)()

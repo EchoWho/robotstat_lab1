@@ -25,7 +25,8 @@ public:
 	this->obs_map_object = mo;
 	this->motion_model_object = mm;
 
-	alpha = (pow(10, 3) - 1) / max_rng;
+	// alpha = (pow(10, 5) - 1) / max_rng;
+	alpha = 0.0025;
 	norm_const = 1.0 / (sigma * sqrt(2 * M_PI));
 	sigma2 = pow(sigma, 2);
 	assert(len(obs_map_object.coord_idx_lookup) > 0);
@@ -67,7 +68,7 @@ public:
 	}
 
 
-	double p_short = 1.0 / double(1 + alpha * z);
+	double p_short = exp(- z * alpha);
 
 	p_z_given_x += c_hit * p_hit + c_short * p_short;
 
@@ -155,7 +156,7 @@ public:
 
 	double log_weight_sum = 0;
 	
-	int sample_skip = 5;
+	int sample_skip = 0;
 
 	// ofstream writer("temp.txt");
 
@@ -186,6 +187,7 @@ public:
     double resolution;
     double norm_const;
     double sigma, sigma2;
+    double A;
 
     map_object obs_map_object;
     motion_model motion_model_object;
