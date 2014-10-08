@@ -1,6 +1,5 @@
 import os, sys, pdb, signal, time
 
-import gtkutils.img_util as iu
 import map_parser
 import logparse
 import motion_model
@@ -77,7 +76,6 @@ class particle_collection(object):
         else:
             self.xy_record = numpy.dstack((self.xy_record, pose_coords))
 
-        print "record shape: {}".format(self.xy_record.shape)
         return pose_coords
 
         # numpy.random.shuffle(vec_pos)
@@ -107,7 +105,7 @@ class particle_collection(object):
 
         plt.figure(1,figsize = (20, 20))
 #        plt.subplot(211)
-        self.last_scatter = plt.scatter(x, y, s = 10, c='red', marker='o', edgecolors='none')
+        self.last_scatter = plt.scatter(x, y, s = 2, c='red', marker='o', edgecolors='none')
         plt.axis([0, 800, 0, 800])
         plt.show(block = False)
         plt.draw()
@@ -185,7 +183,16 @@ def main():
 
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 5000
+
+
+    n_particles = 1000
+    use_cpp_observation_model = True
+    use_cpp_motion_model = True
+    observation_model_off = False
+
+    do_both = False
+    display_period = 2
+
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
@@ -236,9 +243,9 @@ def main():
             u_arctan = numpy.arctan2(u[1], u[0])
 
             print "computing motion model.."
+            print "use_cpp_motion_model: {}".format(use_cpp_motion_model)
             for p in pc.particles: 
-                p.pose[2] = 7 * 2 * numpy.pi / 8
-                mm.update(p, u, u_norm, u_arctan)
+                mm.update(p, u, u_norm, u_arctan, use_cpp_motion_model = use_cpp_motion_model)
                 #pass
 
         if isobservation(line):
@@ -254,8 +261,6 @@ def main():
             n_in_wall = 0
             for i in range(180):
                 laser.append(np.float64(line[i + laser_start]))
-
-            print numpy.max(laser)
 
             #pose = pc.particles[0].pose
             #mo.vis_z_expected(pose)
@@ -279,11 +284,9 @@ def main():
 
                 # pdb.set_trace()
 
-                use_cpp_version = True
-                do_both = False
                 py_weights = []
 
-                if use_cpp_version or do_both:
+                if use_cpp_observation_model or do_both:
                     print "using cpp version"
                     poses = numpy.array([p.pose.copy() for p in pc.particles])
 
@@ -295,13 +298,15 @@ def main():
                                                            numpy.array([offset_norm, offset_arctan], 
                                                                        dtype=numpy.float64),
                                                            numpy.array(laser, dtype = numpy.float64))
+                    if observation_model_off:
+                        weights[weights != 0] = 1
                     
 
                     if (weights.shape != (len(pc.particles),)):
                         raise RuntimeError("cpp weights wrong dim!")
                     for (p_idx, p) in enumerate(pc.particles):
                         p.weight *= weights[p_idx]                
-                if not use_cpp_version or do_both:
+                if not use_cpp_observation_model or do_both:
                     print "using python version"
                     for p_idx, p in enumerate(pc.particles):
                         one_weight = obs_model.get_weight(p.pose, 
@@ -310,7 +315,10 @@ def main():
                                                           offset_arctan, 
                                                           laser)
                         py_weights.append(one_weight)
-                        p.weight *= one_weight
+                        if observation_model_off:
+                            p.weight = 1 if one_weight > 0 else 0
+                        else:
+                            p.weight *= one_weight
                     
                     # py_weights = numpy.array(py_weights)
                     # pdb.set_trace()
@@ -349,8 +357,6 @@ def main():
             print "resampled"
             #update stuff
         
-        print "lidx ", l_idx
-        display_period = 8
         if l_idx % display_period == 0:
             print "updating display..."
             pc.show()

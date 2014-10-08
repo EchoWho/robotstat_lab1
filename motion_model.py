@@ -70,11 +70,12 @@ class motion_model(object):
                             [0,0,1]])
         return rot_mat
 
-    def update(self, x0, u, u_norm, u_arctan):
+    def update(self, x0, u, u_norm, u_arctan, use_cpp_motion_model):
         # print "original pose: ", x0.pose
 
-        #x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
-        #return
+        if use_cpp_motion_model:
+            x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+            return
 
         pose = x0.pose
 

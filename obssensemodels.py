@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-import gtkutils.img_util as iu
 import motion_model
 import copy
 
