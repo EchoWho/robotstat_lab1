@@ -60,8 +60,8 @@ class motion_model(object):
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
-        self.alpha1 = 1e-3 
-        self.alpha2 = 5e-3 
+        self.alpha1 = 5e-4
+        self.alpha2 = 5e-4 
         self.alpha3 = 1e-3  
         self.alpha4 = 1e-8 
 

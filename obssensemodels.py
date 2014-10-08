@@ -72,7 +72,7 @@ class observation_view(object):
         self.lastscatter = plt.scatter(data[0, :], data[1, :], c='blue', edgecolors='none')
         self.lastexpected = plt.scatter(np.array(x_expected), np.array(y_expected), c='red', edgecolors='none')
 
-        bound = 1200
+        bound = 2000
         plt.axis([-bound, bound, -bound, bound])
         plt.draw()
 
@@ -96,7 +96,7 @@ class observation_model:
       self.max_rng = 1200.0
 
       # Relative weights of observation model components
-      self.c_hit = 3
+      self.c_hit = 2
       self.c_short = 0.1
       self.c_max = 0.5
       self.c_rand = 1.0 # keep this fixed.

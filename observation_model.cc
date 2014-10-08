@@ -62,7 +62,7 @@ public:
 
 	double p_z_given_x = 1;
 
-	if (z > max_rng && z_expected > max_rng)
+	if (z > max_rng && z_expected > max_rng && std::abs(z - z_expected) < 500)
 	{
 	    p_z_given_x += c_max;
 	}
@@ -163,7 +163,7 @@ public:
 
 	double log_weight_sum = 0;
 	
-	int sample_skip = 1;
+	int sample_skip = 5;
 
 	// ofstream writer("temp.txt");
 

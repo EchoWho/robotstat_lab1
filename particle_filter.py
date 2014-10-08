@@ -160,7 +160,7 @@ class particle_collection(object):
         idx = 0
         selected = []
 
-        angle_var = 50 * numpy.pi / 180
+        angle_var = 5 * numpy.pi / 180
         angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
 
         pos_var = 1
@@ -173,7 +173,7 @@ class particle_collection(object):
             
             # selected[-1].pose[0] += x_pos_vars[i]
             # selected[-1].pose[1] += y_pos_vars[i]
-            # selected[-1].pose[2] += angle_vars[i]
+            selected[-1].pose[2] += angle_vars[i]
 
             w += inc
             w_greaters = w >= w_cumsums
