@@ -135,21 +135,30 @@ class particle_collection(object):
         angle_var = 10 * numpy.pi / 180
         angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
 
-        pos_var = .1
+        pos_var = 1
         x_pos_vars = numpy.random.normal(loc = 0, scale = pos_var**2, size = M)
         y_pos_vars = numpy.random.normal(loc = 0, scale = pos_var**2, size = M)
         
         for i in range(M):
-          selected.append(copy.deepcopy(self.particles[idx]))
-          selected[-1].weight = 1        
+            selected.append(copy.deepcopy(self.particles[idx]))
+            selected[-1].weight = 1        
+            
+            selected[-1].pose[0] += x_pos_vars[i]
+            selected[-1].pose[1] += y_pos_vars[i]
+            selected[-1].pose[2] += angle_vars[i]
 
-          # selected[-1].pose[0] += x_pos_vars[i]
-          # selected[-1].pose[1] += y_pos_vars[i]
-          selected[-1].pose[2] += angle_vars[i]
+            w += inc
+            w_greaters = w >= w_cumsums
+            if w_greaters.any():
+                idx = numpy.where(w_greaters)[0][-1] + 1
+            else:
+                idx = 0
 
-          w += inc
-          while idx < len(w_cumsums) and w >= w_cumsums[idx]:
-            idx += 1
+            
+            #while idx < len(w_cumsums) and w >= w_cumsums[idx]:
+            #    idx += 1
+            #assert(idx == alt_idx)
+            
 
 
         self.particles = selected
@@ -174,7 +183,7 @@ def main():
     map_file = 'data/map/wean.dat'
 
     mo = map_parser.map_obj(map_file)
-    logfile_fn = 'data/log/robotdata1.log'
+    logfile_fn = 'data/log/robotdata2.log'
 
     import datetime
     ts = str(datetime.datetime.now()).split()[1]
@@ -185,10 +194,17 @@ def main():
     
 
 
-    n_particles = 1000
+    n_particles = 300
+
+    #usually true
     use_cpp_observation_model = True
     use_cpp_motion_model = True
-    observation_model_off = False
+
+    #usually false
+    observation_model_off = True
+    vis_motion_model = False
+    
+    start_idx = 0 if not vis_motion_model else 60
 
     do_both = False
     display_period = 2
@@ -226,7 +242,7 @@ def main():
     # pdb.set_trace()
     
     #todo remove start idx
-    for (l_idx, line) in enumerate(log.lines):
+    for (l_idx, line) in enumerate(log.lines[start_idx:]):
         line = line.split()
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
@@ -245,7 +261,9 @@ def main():
             print "computing motion model.."
             print "use_cpp_motion_model: {}".format(use_cpp_motion_model)
             for p in pc.particles: 
-                mm.update(p, u, u_norm, u_arctan, use_cpp_motion_model = use_cpp_motion_model)
+                mm.update(p, u, u_norm, u_arctan, 
+                          use_cpp_motion_model = use_cpp_motion_model,
+                          vis_motion_model = vis_motion_model)
                 #pass
 
         if isobservation(line):
@@ -364,6 +382,7 @@ def main():
         if l_idx % 1 == 0:
             numpy.savez_compressed(record_fn, pc.xy_record)
 
+    pc.last_scatter.remove()
     vis_history.vis_collection(record_fn)
 
 def signal_handler(signal, frame):

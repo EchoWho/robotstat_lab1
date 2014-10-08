@@ -70,10 +70,10 @@ class motion_model(object):
                             [0,0,1]])
         return rot_mat
 
-    def update(self, x0, u, u_norm, u_arctan, use_cpp_motion_model):
+    def update(self, x0, u, u_norm, u_arctan, use_cpp_motion_model, vis_motion_model = False):
         # print "original pose: ", x0.pose
 
-        if use_cpp_motion_model:
+        if use_cpp_motion_model and not vis_motion_model:
             x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
             return
 
@@ -96,7 +96,7 @@ class motion_model(object):
         new_pose = update_pose_with_sample(pose, sample)
         x0.pose = new_pose
 
-        if 0 and numpy.linalg.norm(u[:2]) > 0:
+        if vis_motion_model and numpy.linalg.norm(u[:2]) > 0:
             sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                                  self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                                  self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
