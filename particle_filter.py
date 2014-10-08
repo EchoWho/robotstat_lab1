@@ -62,11 +62,14 @@ class particle_collection(object):
         for p_idx in range(n_particles):
           pos_idx = int(numpy.random.uniform(0, num_pos - 1e-6))
           pos = vec_pos[pos_idx]
+
           theta_i = int(numpy.random.uniform(0, nbr_theta - 1e-6))
           self.particles.append(particle(numpy.array([self.map_obj.resolution * pos[0], 
                                                       self.map_obj.resolution * pos[1], 
                                                       theta_i * unit_theta]),
                                          1.0))
+                                                      #            p_idx * unit_theta % (2* numpy.pi)]),
+
 
     def record_xy(self):
         print "recording xy"
@@ -132,7 +135,7 @@ class particle_collection(object):
         idx = 0
         selected = []
 
-        angle_var = 10 * numpy.pi / 180
+        angle_var = 50 * numpy.pi / 180
         angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
 
         pos_var = 1
@@ -143,9 +146,9 @@ class particle_collection(object):
             selected.append(copy.deepcopy(self.particles[idx]))
             selected[-1].weight = 1        
             
-            selected[-1].pose[0] += x_pos_vars[i]
-            selected[-1].pose[1] += y_pos_vars[i]
-            selected[-1].pose[2] += angle_vars[i]
+            # selected[-1].pose[0] += x_pos_vars[i]
+            # selected[-1].pose[1] += y_pos_vars[i]
+            # selected[-1].pose[2] += angle_vars[i]
 
             w += inc
             w_greaters = w >= w_cumsums
@@ -198,7 +201,7 @@ def main():
 
     #usually true
     use_cpp_observation_model = True
-    use_cpp_motion_model = True
+    use_cpp_motion_model = False
 
     #usually false
     observation_model_off = True
@@ -250,12 +253,18 @@ def main():
         if isobservation(line): #or ismotion(line)
             num_new_motions += have_moved
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
+
+            # if l_idx>65:
+            #     pdb.set_trace()
             u = odom_control_gen.calculate_u(pose)
+            u_norm = numpy.linalg.norm(u[:2])
+            print u_norm
+
 
             have_moved = numpy.linalg.norm(u[:2]) > 1e-6
             first_obs_at_pos = first_obs_at_pos or have_moved
             
-            u_norm = numpy.linalg.norm(u[:2])
+
             u_arctan = numpy.arctan2(u[1], u[0])
 
             print "computing motion model.."

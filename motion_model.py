@@ -23,6 +23,9 @@ def update_pose_with_sample(pose, sample):
     ynew = pose[1] + sample[1] * numpy.sin(pose[2] + sample[0])
     th_new = (pose[2] + sample[0] + sample[2]) % (2 * numpy.pi)
     
+    # if (sample[0] or sample[2]) > 0:
+    #     pdb.set_trace()
+    
     new_pose = numpy.asarray([xnew, ynew, th_new], dtype = numpy.float64)
     return new_pose
 
@@ -54,10 +57,12 @@ class motion_model(object):
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
 
-        self.alpha1 = 1e-3
-        self.alpha2 = 5e-3
-        self.alpha3 = 1e-3
-        self.alpha4 = 1e-8
+        self.alpha1 = 1e-3 * 0
+        self.alpha2 = 5e-3 * 0
+        self.alpha3 = 1e-3 * 0 
+        self.alpha4 = 1e-8 * 0
+
+
 
         self.cpp_motion_model = lmm.motion_model(self.alpha1, self.alpha2, self.alpha3, self.alpha4)
 
