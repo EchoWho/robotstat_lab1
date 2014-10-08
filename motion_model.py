@@ -73,8 +73,8 @@ class motion_model(object):
     def update(self, x0, u, u_norm, u_arctan):
         # print "original pose: ", x0.pose
 
-        # x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
-        # return
+        #x0.pose = self.cpp_motion_model.update(x0.pose.copy(), u.copy(), float(u_norm), float(u_arctan))
+        #return
 
         pose = x0.pose
 
@@ -95,7 +95,7 @@ class motion_model(object):
         new_pose = update_pose_with_sample(pose, sample)
         x0.pose = new_pose
 
-        if 1 and numpy.linalg.norm(u[:2]) > 0:
+        if 0 and numpy.linalg.norm(u[:2]) > 0:
             sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                                  self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                                  self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \

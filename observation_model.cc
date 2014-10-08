@@ -182,7 +182,7 @@ public:
 				   2 * M_PI);
 	}
 
-	double weight = std::exp(log_weight_sum * 1 / 2);
+	double weight = std::exp(log_weight_sum * 0.4);
 	
 	// cout << "weight: " << weight << endl;
 	// weight = pow(weight, 1.0 / 2.0);
