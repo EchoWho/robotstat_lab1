@@ -9,8 +9,8 @@ from gtkutils.color_printer import gcp
 class map_obj(object):
     def __init__(self, map_fn, n_angle_bins = 72):
         x = 0
-#        self.hit_thresh = 0.999
-        self.hit_thresh = 0.8
+        self.hit_thresh = 0.998
+    #    self.hit_thresh = 0.8
 
         self.coord_idx_lookup = {}
 
@@ -220,7 +220,7 @@ class map_obj(object):
 
 def main():
     map_file = 'data/map/wean.dat'
-    n_angle_bins = 360
+    n_angle_bins = 72
     mo = map_obj(map_file, n_angle_bins)
 
         
