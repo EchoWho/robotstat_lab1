@@ -89,7 +89,7 @@ class observation_model:
       self.mu_expon = 0 # mean of exponential distribution
       self.spread_expon = 10
 
-      self.sigma = 40 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
+      self.sigma = 50 # stdev of gaussian for p_hit (comp1_gauss) in centimeters
       self.sigma2 = self.sigma**2
       self.norm_const = 1/(self.sigma * numpy.sqrt(2*numpy.pi))
 
@@ -97,7 +97,7 @@ class observation_model:
       self.max_rng = 1200.0
 
       # Relative weights of observation model components
-      self.c_hit = 4.0
+      self.c_hit = 3
       self.c_short = 0.1
       self.c_max = 0.5
       self.c_rand = 1.0 # keep this fixed.
@@ -165,6 +165,9 @@ class observation_model:
         # if the Laser pose is in the wall then the particle has weight 0
         if self.map_obj.is_hit(pose_new) or self.map_obj.is_hit(pose):
             return 0
+
+        print "cheating"
+        return 1
 
         
         # return self.get_point_wise_weight(pose_new, laser)

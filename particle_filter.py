@@ -136,11 +136,19 @@ class particle_collection(object):
 
         angle_var = 10 * numpy.pi / 180
         angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
+
+        pos_var = .1
+        x_pos_vars = numpy.random.normal(loc = 0, scale = pos_var**2, size = M)
+        y_pos_vars = numpy.random.normal(loc = 0, scale = pos_var**2, size = M)
         
         for i in range(M):
           selected.append(copy.deepcopy(self.particles[idx]))
           selected[-1].weight = 1        
+
+          # selected[-1].pose[0] += x_pos_vars[i]
+          # selected[-1].pose[1] += y_pos_vars[i]
           selected[-1].pose[2] += angle_vars[i]
+
           w += inc
           while idx < len(w_cumsums) and w >= w_cumsums[idx]:
             idx += 1
@@ -216,7 +224,7 @@ def main():
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
 
-        if ismotion(line): #or isobservation(line):
+        if isobservation(line): #or ismotion(line)
             num_new_motions += have_moved
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
             u = odom_control_gen.calculate_u(pose)
@@ -280,13 +288,14 @@ def main():
                     poses = numpy.array([p.pose.copy() for p in pc.particles])
 
                     update_particle_weights_func = obs_model.cpp_observation_model.update_particle_weights
-                    
+
                     weights = update_particle_weights_func(poses,
                                                            numpy.array(laser_pose_offset, 
                                                                        dtype = numpy.float64),
                                                            numpy.array([offset_norm, offset_arctan], 
                                                                        dtype=numpy.float64),
                                                            numpy.array(laser, dtype = numpy.float64))
+                    
 
                     if (weights.shape != (len(pc.particles),)):
                         raise RuntimeError("cpp weights wrong dim!")

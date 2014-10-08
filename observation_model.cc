@@ -68,6 +68,7 @@ public:
 	}
 
 
+
 	double p_short = exp(- z * alpha);
 
 	p_z_given_x += c_hit * p_hit + c_short * p_short;
@@ -94,12 +95,13 @@ public:
 	double offset_norm = offsets[ind(0)];
 	double offset_arctan = offsets[ind(1)];
 
+
 	// cout <<"offset norm: " << offset_norm << endl;
 	// cout << " offset arctan: " << offset_arctan << endl;
 
 	// cout << "dims[0]" << dims[0] << endl;
 
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for(size_t i =0; i < dims[0]; i++)
 	{
 
@@ -127,6 +129,7 @@ public:
 	
 	assert(len(obs_map_object.coord_idx_lookup) > 0);
 	assert(laser.dims[0] == 180);
+
 	motion_model_object.compute_relative_transform(pose, 
 						       laser_pose_offset,
 						       offset_norm,
@@ -144,6 +147,7 @@ public:
 	pose_vec.push_back(pose[ind(0)]);
 	pose_vec.push_back(pose[ind(1)]);
 	pose_vec.push_back(pose[ind(2)]);
+
 	vector<double> new_pose = motion_model_object.update_pose_with_sample(pose, sample);
 	new_pose[2] -= M_PI / 2.0;
 
@@ -156,15 +160,18 @@ public:
 
 	double log_weight_sum = 0;
 	
-	int sample_skip = 0;
+	int sample_skip = 1;
 
 	// ofstream writer("temp.txt");
 
+
 	for(size_t l_idx = 0; l_idx < laser.dims[0]; l_idx++)
 	{
+
 	    if (l_idx % sample_skip == 0)
 	    {
 		double z = laser[ind(l_idx)];
+		
 		double logpz = get_log_p_z_given_pose_u(z, new_pose);
 		log_weight_sum += logpz;
 		// writer << logpz<< "\n";
@@ -175,7 +182,10 @@ public:
 				   2 * M_PI);
 	}
 
-	double weight = std::exp(log_weight_sum);
+	double weight = std::exp(log_weight_sum * 1 / 2);
+	
+	// cout << "weight: " << weight << endl;
+	// weight = pow(weight, 1.0 / 2.0);
 	return weight;
     }
     
