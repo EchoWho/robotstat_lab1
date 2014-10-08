@@ -163,7 +163,7 @@ public:
 
 	double log_weight_sum = 0;
 	
-	int sample_skip = 5;
+	int sample_skip = 3;
 
 	// ofstream writer("temp.txt");
 
@@ -222,6 +222,7 @@ BOOST_PYTHON_MODULE(libobservation_model)
 
 	.def(init<float, float, float, float, float, float, map_object, motion_model>())
 	.def("get_weight", &observation_model::get_weight)
+	.def_readwrite("c_hit", &observation_model::c_hit)
 	.def("update_particle_weights", &observation_model::update_particle_weights)
 	.def("_check_lookup_size", &observation_model::check_lookup_size)
 	;

@@ -97,7 +97,7 @@ class observation_model:
 
       # Relative weights of observation model components
       self.c_hit = 2
-      self.c_short = 0.1
+      self.c_short = 0.2
       self.c_max = 0.5
       self.c_rand = 1.0 # keep this fixed.
       

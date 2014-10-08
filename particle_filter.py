@@ -96,7 +96,7 @@ class particle_collection(object):
 
         # print "created {} particles".format(len(self.particles))
 
-    def show(self, x = None, y = None):
+    def show(self, x = None, y = None, th = None):
         if self.last_scatter is not None:
             self.last_scatter.remove()
 
@@ -104,7 +104,7 @@ class particle_collection(object):
 
         color = [255, 128, 0]
         
-        if x is None and y is  None:
+        if x is None and y is  None and th is None:
             pose_coords = self.record_xy()
         
             x = pose_coords[:, 0]
@@ -160,7 +160,7 @@ class particle_collection(object):
         idx = 0
         selected = []
 
-        angle_var = 5 * numpy.pi / 180
+        angle_var = 0.01 * numpy.pi / 180
         angle_vars = numpy.random.normal(loc = 0, scale = angle_var**2, size = M)
 
         pos_var = 1
@@ -222,7 +222,7 @@ def main():
     
 
 
-    n_particles = 5000
+    n_particles = 1000
 
     #usually true
     use_cpp_observation_model = True
@@ -270,12 +270,15 @@ def main():
     # pdb.set_trace()
     
     #todo remove start idx
+
+    num_total_observations = 0
     for (l_idx, line) in enumerate(log.lines[start_idx:]):
         line = line.split()
 
         print "line {} / {}".format(l_idx + 1, len(log.lines))
 
-        if isobservation(line): #or ismotion(line)
+        if isobservation(line):
+            num_total_observations += 1
             num_new_motions += have_moved
             pose = numpy.array([np.float64(line[1]), np.float64(line[2]), np.float64(line[3])])
 
@@ -386,14 +389,15 @@ def main():
                 print "max weight: {}".format(new_weights.max())
                 max_pose = pc.particles[np.argmax(new_weights)].pose.copy()
                 print "max weight location: {}".format( max_pose )
-                pose_debug = np.array([ 3975, 4130, numpy.pi ])
-                print "weight of {} is {} ".format( pose_debug, 
-                                                    obs_model.get_weight(pose_debug, 
-                                                                         laser_pose_offset, 
-                                                                         offset_norm, 
-                                                                         offset_arctan, 
-                                                                         faux_last_odom_theta = faux_last_odom_theta, 
-                                                                         laser = laser))
+
+                # pose_debug = np.array([ 3975, 4130, numpy.pi ])
+                # print "weight of {} is {} ".format( pose_debug, 
+                #                                     obs_model.get_weight(pose_debug, 
+                #                                                          laser_pose_offset, 
+                #                                                          offset_norm, 
+                #                                                          offset_arctan, 
+                #                                                          faux_last_odom_theta = faux_last_odom_theta, 
+                #                                                          laser = laser))
                 obs_view.vis_pose_and_laser(max_pose, laser)
                 # pdb.set_trace()
                 #obs_view.vis_pose_and_laser(pose_debug, laser)
@@ -406,8 +410,8 @@ def main():
                 #vw2 = obs_model.get_vec_point_wise_weight(pose_debug_new, laser)
                 #pdb.set_trace()
 
-        elif not ismotion(line):
-            raise RuntimeError("unknown line type!!!11!!!1")
+        # elif not ismotion(line):
+        #     raise RuntimeError("unknown line type!!!11!!!1")
 
         if (num_new_motions > 0) and (num_new_observations > 0):
             num_new_motions = 0
