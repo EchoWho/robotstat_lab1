@@ -5,20 +5,46 @@ import numpy
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import warnings
+import sys
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import libmotion_model as lmm
+
+def compute_relative_transform(u, u_norm, u_arctan, last_odom_theta):
+    drot1 = u_arctan - last_odom_theta
+    dtrans = u_norm
+    drot2 = u[2] - drot1
+    return drot1, dtrans, drot2
+
+def update_pose_with_sample(pose, sample):
+    xnew = pose[0] + sample[1] * numpy.cos(pose[2] + sample[0])
+    ynew = pose[1] + sample[1] * numpy.sin(pose[2] + sample[0])
+    th_new = (pose[2] + sample[0] + sample[2]) % (2 * numpy.pi)
+    
+    # if (sample[0] or sample[2]) > 0:
+    #     pdb.set_trace()
+    
+    new_pose = numpy.asarray([xnew, ynew, th_new], dtype = numpy.float64)
+    return new_pose
 
 class odometry_control_generator(object):
     def __init__(self):
       self.last_odom = None
 
-    def calculate_u(self, new_pose):
-        assert(new_pose != None)
+    def calculate_u_and_theta(self, new_pose):
+        assert(new_pose is not None)
 
         if self.last_odom is None:
             u = numpy.array(( 0, 0, 0 ), dtype = numpy.float64)
+            th = new_pose[2]
         else:
             u = new_pose - self.last_odom  
+            th = self.last_odom[2]
+
         self.last_odom = new_pose
-        return u
+        return u, th
         
 class motion_model(object):
     def __init__(self):
@@ -29,10 +55,19 @@ class motion_model(object):
         self.motion_variance = 0
         self.Sigma = numpy.array([self.motion_variance, self.motion_variance, numpy.pi / 180. * deg_sigma]) * numpy.eye(3)
 
-        self.alpha1 = 1.2e-1
+        self.alpha1 = 0.5e-2
         self.alpha2 = 1e-2
         self.alpha3 = .5e-2
         self.alpha4 = 1e-8
+
+        self.alpha1 = 5e-4
+        self.alpha2 = 5e-4 
+        self.alpha3 = 1e-3  
+        self.alpha4 = 1e-8 
+
+
+
+        self.cpp_motion_model = lmm.motion_model(self.alpha1, self.alpha2, self.alpha3, self.alpha4)
 
     def get_rot_mat(self, pose):
         theta = pose[2]
@@ -43,61 +78,38 @@ class motion_model(object):
                             [0,0,1]])
         return rot_mat
 
-    def update_pose_with_sample(self, pose, sample):
-        xnew = pose[0] + sample[1] * numpy.cos(pose[2] + sample[0])
-        ynew = pose[1] + sample[1] * numpy.sin(pose[2] + sample[0])
-        th_new = (pose[2] + sample[0] + sample[2]) % (2 * numpy.pi)
-        
-        new_pose = numpy.asarray([xnew, ynew, th_new], dtype = numpy.float64)
-        return new_pose
-        
-    def update(self, x0, u, u_norm, u_arctan):
-        pose = x0.pose.copy()
+    def update(self, x0, u, u_norm, u_arctan, last_odom_theta, use_cpp_motion_model, vis_motion_model = False):
+        # print "original pose: ", x0.pose
 
-        drot1 = u_arctan - pose[2]
-        dtrans = u_norm
-        drot2 = u[2] - drot1
+        if use_cpp_motion_model and not vis_motion_model:
+            x0.pose = self.cpp_motion_model.update(x0.pose.copy(), 
+                                                   u.copy(), 
+                                                   float(u_norm), 
+                                                   float(u_arctan),
+                                                   float(last_odom_theta))
+            return
+
+        pose = x0.pose
+
+        drot1, dtrans, drot2 = compute_relative_transform(u, u_norm, u_arctan, 
+                                                          last_odom_theta = last_odom_theta)
 
         drot1_sq = drot1**2
         dtrans_sq = dtrans**2
         drot2_sq = drot2**2
 
-        # sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
-        #                      self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
-        #                      self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
-        #     numpy.eye(3)
-        
-        
-        # sample = multivariate_normal(mean = [drot1, dtrans, drot2],
-        #                              cov = sigma)
-        
         sample = numpy.random.normal(size=(3,))
+
+
         sample = numpy.array( [drot1, dtrans, drot2] ) + \
             numpy.sqrt([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                         self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                         self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * sample 
-        
-#        sample0 = numpy.random.normal(drot1, numpy.sqrt(self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq))
-#        sample1 = numpy.random.normal(dtrans, numpy.sqrt(self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq))
-#        sample2 = numpy.random.normal(drot2, numpy.sqrt(self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq))
-#        sample = numpy.asarray([sample0, sample1, sample2])
-        
-        new_pose = self.update_pose_with_sample(pose, sample)
+
+        new_pose = update_pose_with_sample(pose, sample)
         x0.pose = new_pose
 
-        # rot_mat = self.get_rot_mat(x0.pose)
-
-        # u_world = rot_mat.dot(u + self.mu)
-        # mu_x1 = x0.pose + u_world
-
-        # sigma = self.Sigma.copy()
-        
-        # u_sigma = 0
-        # sigma[range(3), range(3)] += u_sigma * u_world
-
-        # sample = multivariate_normal(mean = mu_x1, cov=sigma)
-
-        if 1 and numpy.linalg.norm(u[:2]) > 0:
+        if vis_motion_model and numpy.linalg.norm(u[:2]) > 0:
             sigma = numpy.array([self.alpha1 * drot1_sq + self.alpha2 * dtrans_sq,
                                  self.alpha3 * dtrans_sq + self.alpha4 * drot1_sq + self.alpha4 * drot2_sq,
                                  self.alpha1 * drot2_sq + self.alpha2 * dtrans_sq]) * \
@@ -110,7 +122,7 @@ class motion_model(object):
             new_poses = []
             for s in range(n_samples):
                 sample = samples[s, :]
-                new_pose = self.update_pose_with_sample(pose, sample)
+                new_pose = update_pose_with_sample(pose, sample)
                 new_poses.append(new_pose)
             new_poses = numpy.array(new_poses)
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os, sys
 
 import particle_filter
@@ -29,8 +30,8 @@ def vis_collection(fn, save = True, save_dir = None):
         pc.show(x = pose_coords[:, 0], y = pose_coords[:, 1])
         plt.savefig('{}/entry_{}.png'.format(save_dir, entry_idx))
         
-    cmd = 'ffmpeg -start_number 0 -i {}/entry_%d.png -vcodec mpeg4 -y {}/movie.avi'.format(save_dir,
-                                                                                           save_dir)
+    cmd = 'ffmpeg -start_number 0 -i {}/entry_%d.png -c:v libx264 -y {}/movie.avi'.format(save_dir,
+                                                                                          save_dir)
     os.system(cmd)
 
 if __name__ == '__main__':

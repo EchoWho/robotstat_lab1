@@ -1,14 +1,22 @@
 import math, copy, os
+import flood_fill
 import numpy
 import numpy as np
 import pdb
-import gtkutils.img_util as iu
-from gtkutils.color_printer import gcp
+
+try:
+    import gtkutils.img_util as iu
+except ImportError:
+    class iu:
+        @staticmethod
+        def v(self):
+            raise ImportError("gtkutils.img_util not imported, can't do iu.v")
 
 class map_obj(object):
-    def __init__(self, map_fn, n_angle_bins = 36):
+    def __init__(self, map_fn, n_angle_bins = 360):
         x = 0
-        self.hit_thresh = 0.8
+        self.hit_thresh = 0.998
+    #    self.hit_thresh = 0.8
 
         self.coord_idx_lookup = {}
 
@@ -40,16 +48,29 @@ class map_obj(object):
                         idx = len(self.valid_coordinates)
                         self.valid_coordinates.append((x, y))
                         self.coord_idx_lookup[(x, y)] = idx
-                        # print "idx: {}".format(idx)
-                        # print "length: {}".format(len(self.valid_coordinates))
-                        # print "valid coord: {}".format(self.valid_coordinates[-1])
-                        # print "coord idx lookup: {}".format(self.coord_idx_lookup[(x, y)])
-                        # print "valid coord from idx: {}".format(self.valid_coordinates[idx])
                 x += 1
 
         self.grid[self.grid == -1] = 0
         self.hit_map = self.grid <= self.hit_thresh
         self.free_map = 1 - self.hit_map 
+
+        self.do_ff = False
+        if self.do_ff:
+            ffgrid = 0 - self.hit_map.copy() 
+            if ffgrid[400, 400] != 0:
+                print "starting is not 0. Error!!!!!"
+            flood_fill.flood_fill(400, 400, ffgrid)
+            self.coord_idx_lookup = {}
+            self.valid_coordinates = []
+            for x in range(self.mapsize_x):
+                for y in range(self.mapsize_y):
+                    if ffgrid[x,y] == 1:
+                        idx = len(self.valid_coordinates)
+                        self.valid_coordinates.append((x,y))
+                        self.coord_idx_lookup[(x,y)] = idx
+                    if ffgrid[x,y] == 0:
+                        self.hit_map[x,y] = 1
+                        self.free_map[x,y] = 0
 
         assert(len(self.valid_coordinates) > 0)
 
@@ -61,7 +82,7 @@ class map_obj(object):
                                                           int(100 * self.hit_thresh))
 
         if not os.path.isfile(rays_fn):
-            gcp.gtime(self.preprocess_rays)
+            self.preprocess_rays()
             numpy.savez_compressed(rays_fn, self.ray_lookup)
         else:
             self.ray_lookup = numpy.load(rays_fn)['arr_0']
@@ -131,7 +152,10 @@ class map_obj(object):
     # output: expected z 
     def get_z_expected(self, pose):
         idx = self._lookup_ind_for_coord(self.get_pose_coord(pose))
+
+        # print "idx", idx
         angle_mod = pose[-1] % (numpy.pi * 2)
+        # print "angle mod", angle_mod
         angle_bin_idx = int((angle_mod / self.angle_bins_step) + .5 ) % self.n_angle_bins
 
         # print "vc[idx]: {}".format(self.valid_coordinates[idx])
@@ -180,7 +204,6 @@ class map_obj(object):
         xs, ys = eight_neighborhood(start_coord[0], start_coord[1])
         # canvas[start_coord[0], start_coord[1], :] = [0, 255, 0]
         canvas[xs, ys, :] = [0, 255, 0]
-
         iu.v(canvas)
 
     def vis_particles(self, particles):
@@ -212,8 +235,11 @@ def main():
 def eight_neighborhood(x, y):
     xs = [x - 1, x - 1, x - 1, x, x, x, x + 1, x + 1, x + 1]
     ys = [y - 1, y, y + 1, y - 1, y, y + 1, y - 1, y, y + 1]
+    xs = [ x if x >=0 else 0 for x in xs ]
+    xs = [ x if x < 800 else 799 for x in xs ]
+    ys = [ y if y >=0 else 0 for y in ys ]
+    ys = [ y if y < 800 else 799 for y in ys ]
     return xs, ys
-    # return [x], [y]
             
 
             
