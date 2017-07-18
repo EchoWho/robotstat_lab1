@@ -156,6 +156,56 @@ class observation_model:
         # p_z_given_x = numpy.power(p_z_given_x, self.p_power)
         return p_z_given_x
 
+    def vis_p_z_given_x_Allie(self):
+        z = np.linspace(0,1000,1000)
+        pz = numpy.zeros((len(z),1))
+        for i in range(len(z)):
+            pz[i] = self.vis_Get_p_z_given_x_Allie(z[i])
+        plt.figure(3)
+        plt.plot(z,pz)
+        plt.show(block=False)
+        plt.draw()
+        pdb.set_trace()
+    def vis_Get_p_z_given_x_Allie(self, z):
+        z_exp = 100
+        # Determine relative weights for each component in the observation model
+        # Add in any parameter changes to the distribution based on u, z_expected
+#        pdb.set_trace()
+        C_hit = self.c_hit * 1
+        C_short = self.c_short * 1
+        C_max = self.c_max * 1
+        C_rand = self.c_rand * 1
+        # Normalize to 1 (probability distribution should integrate to 1)
+        sum_Cs = C_hit + C_short + C_max + C_rand
+        C_hit = C_hit / sum_Cs
+        C_short = C_short / sum_Cs
+        C_max = C_max / sum_Cs
+        C_rand = C_rand / sum_Cs
+
+        # p_hit =  stats.norm.pdf(z, loc=(z_exp + self.dmu), scale=self.sigma) # comp1_gauss
+        p_hit =   self.norm_const * numpy.exp(-(z - z_exp)**2 / (2 * self.sigma2))
+
+        # p_short = stats.expon.pdf(z, self.mu_expon, self.spread_expon)
+        p_short =  1 / np.float64(z+1) 
+
+        # unif1 = stats.uniform(loc = self.max_rng[0], scale = (self.max_rng[1] - self.max_rng[0]) )
+        # p_max = unif1.pdf(z) # Uniform distribution
+
+        unif1 = 1 / np.float64(self.max_rng[1] - self.max_rng[0])
+        p_max = unif1 # Uniform distribution
+
+        # unif2 = stats.uniform( loc = 0, scale = (self.max_rng[1] - 0) )
+        # p_rand = unif2.pdf(z) # Uniform distr.
+
+        unif2 =  1 / np.float64(self.max_rng[1])
+        p_rand = unif2
+        
+        # pdb.set_trace()
+        p_z_given_x = C_hit * p_hit + C_rand * p_rand# + C_short * p_short + C_max * p_max 
+        
+        # p_z_given_x = numpy.power(p_z_given_x, self.p_power)
+        return p_z_given_x
+
     def vis_p_z_given_x_u(self, pose):
         data = []
         zs = numpy.arange(0, 8000, 1)
@@ -168,6 +218,4 @@ class observation_model:
         # plt.axis([0, 8000, 0, 8000])
         plt.show(block = False)
         pdb.set_trace()
-            
-        
 

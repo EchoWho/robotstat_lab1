@@ -1,0 +1,1 @@
+[info] [10-07|11:55:22] [gtkutils.color_printer] sys argv: ['/home/allie/programFiles/anaconda/bin/ipython']

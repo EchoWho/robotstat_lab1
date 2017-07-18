@@ -173,7 +173,7 @@ def main():
 
     log = logparse.logparse(logfile_fn)
     
-    n_particles = 1000
+    n_particles = 10
     print "creating particle collection of {} particles".format(n_particles)
     pc = particle_collection(n_particles = n_particles,
                              map_obj = mo,
